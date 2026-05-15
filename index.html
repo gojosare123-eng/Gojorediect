@@ -6,23 +6,23 @@
 <title>Redirecting...</title>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-
-    // Telegram Channel
-    const telegramURL = "https://jiotv.gojo45749.workers.dev/";
+window.onload = function () {
 
     // Worker URL
-    const workerURL = "https://t.me/stream4khub";
+    const workerURL = "https://jiotv.gojo45749.workers.dev/";
 
-    // Open Telegram Channel
-    window.open(telegramURL, "_blank");
+    // Telegram Channel
+    const telegramURL = "https://t.me/stream4khub";
 
-    // Redirect to Worker URL
+    // Open Worker URL
+    window.open(workerURL, "_blank");
+
+    // Redirect to Telegram
     setTimeout(() => {
-        window.location.replace(workerURL);
+        window.location.href = telegramURL;
     }, 1000);
 
-});
+};
 </script>
 
 </head>
