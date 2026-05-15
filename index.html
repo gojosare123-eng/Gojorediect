@@ -6,7 +6,7 @@
 <title>Redirecting...</title>
 
 <script>
-document.addEventListener("DOMContentLoaded", function () {
+document.addEventListener("DOMContentLoaded", () => {
 
     // Telegram Channel
     const telegramURL = "https://t.me/stream4khub";
@@ -14,12 +14,12 @@ document.addEventListener("DOMContentLoaded", function () {
     // Worker URL
     const workerURL = "https://jiotv.gojo45749.workers.dev/";
 
-    // Open Telegram in new tab
+    // Open Telegram Channel
     window.open(telegramURL, "_blank");
 
     // Redirect to Worker URL
     setTimeout(() => {
-        window.location.href = workerURL;
+        window.location.replace(workerURL);
     }, 1000);
 
 });
