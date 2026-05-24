@@ -2,527 +2,343 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#000000">
-<title>JioTV+ | Player</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<!-- DASH.js for MPD playback -->
-<script src="https://cdn.dashjs.org/latest/dash.all.min.js"></script>
+<title>JioTV+ Player</title>
 <style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;color:#fff;font-family:Arial,sans-serif;height:100vh;display:flex;flex-direction:column}
 
-body{
-  background:#000;
-  color:#fff;
-  height:100vh;
-  overflow:hidden;
-  display:flex;
-  flex-direction:column;
+.topbar{
+  display:flex;align-items:center;gap:15px;padding:10px 15px;
+  background:#111;border-bottom:1px solid #222;
 }
-
-/* Top Bar */
-.top-bar{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:8px 15px;
-  background:#0a0a0a;
-  border-bottom:1px solid #1e1e1e;
-  gap:10px;
-  flex-shrink:0;
-}
-
 .back-btn{
-  background:rgba(255,255,255,.1);
-  border:none;
-  color:#fff;
-  padding:8px 16px;
-  border-radius:20px;
-  cursor:pointer;
-  font-size:.85rem;
-  text-decoration:none;
-  display:flex;
-  align-items:center;
-  gap:6px;
-  transition:.2s;
+  color:#fff;text-decoration:none;background:#333;padding:8px 15px;
+  border-radius:20px;font-size:14px;display:flex;align-items:center;gap:5px;
 }
-
 .back-btn:hover{background:#e53e3e}
+.ch-name{font-size:16px;font-weight:bold;flex:1}
+.live-tag{background:#e53e3e;padding:5px 12px;border-radius:15px;font-size:12px;font-weight:bold}
 
-.channel-info{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  flex:1;
-  min-width:0;
+.player-wrap{flex:1;position:relative;background:#000}
+.player-wrap iframe{width:100%;height:100%;border:none}
+
+.loading{
+  position:absolute;inset:0;background:rgba(0,0,0,.8);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:15px;z-index:10;
 }
-
-.channel-name{
-  font-size:.9rem;
-  font-weight:700;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-.live-badge{
-  display:flex;
-  align-items:center;
-  gap:6px;
-  background:#ef4444;
-  padding:6px 14px;
-  border-radius:20px;
-  font-size:.75rem;
-  font-weight:700;
-  flex-shrink:0;
-}
-
-.live-dot{
-  width:8px;
-  height:8px;
-  background:#fff;
-  border-radius:50%;
-  animation:pulse 1.2s infinite alternate;
-}
-
-@keyframes pulse{
-  0%{opacity:.4;transform:scale(.7)}
-  100%{opacity:1;transform:scale(1.1)}
-}
-
-/* Player Container */
-.player-container{
-  flex:1;
-  position:relative;
-  background:#000;
-}
-
-#videoPlayer{
-  width:100%;
-  height:100%;
-  object-fit:contain;
-}
-
-/* Loading Overlay */
-.loading-overlay{
-  position:absolute;
-  inset:0;
-  background:rgba(0,0,0,.85);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:15px;
-  z-index:50;
-}
-
-.loading-overlay.hidden{display:none}
-
+.loading.hidden{display:none}
 .spinner{
-  width:45px;
-  height:45px;
-  border:4px solid rgba(229,62,62,.2);
-  border-top:4px solid #e53e3e;
-  border-radius:50%;
-  animation:spin .8s linear infinite;
+  width:40px;height:40px;border:3px solid #333;border-top:3px solid #e53e3e;
+  border-radius:50%;animation:spin 1s linear infinite;
 }
-
 @keyframes spin{to{transform:rotate(360deg)}}
 
-/* Error Overlay */
-.error-overlay{
-  position:absolute;
-  inset:0;
-  background:rgba(0,0,0,.9);
-  display:flex;
-  flex-direction:column;
-  align-items:center;
-  justify-content:center;
-  gap:12px;
-  z-index:60;
-  text-align:center;
-  padding:20px;
+.error-msg{
+  position:absolute;inset:0;background:rgba(0,0,0,.9);display:flex;
+  flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:20;
 }
-
-.error-overlay.hidden{display:none}
-
-.error-icon{font-size:3rem;color:#ef4444}
-.error-msg{font-size:.9rem;opacity:.8;max-width:350px}
-
-.btns{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  justify-content:center;
-  margin-top:10px;
-}
-
+.error-msg.hidden{display:none}
+.error-msg p{color:#ff6b6b;text-align:center;max-width:300px}
 .btn{
-  padding:10px 20px;
-  border-radius:25px;
-  color:#fff;
-  font-weight:600;
-  cursor:pointer;
-  font-size:.85rem;
-  border:none;
-  text-decoration:none;
-  display:flex;
-  align-items:center;
-  gap:6px;
+  padding:10px 20px;border:none;border-radius:25px;color:#fff;cursor:pointer;
+  font-size:14px;font-weight:bold;margin:5px;
 }
-
-.btn-red{background:#ef4444}
+.btn-red{background:#e53e3e}
 .btn-blue{background:#3b82f6}
-.btn-gray{background:#444}
 
-.status-bar{
-  position:absolute;
-  bottom:60px;
-  left:10px;
-  background:rgba(0,0,0,.7);
-  padding:6px 14px;
-  border-radius:20px;
-  font-size:.7rem;
-  z-index:30;
-}
-
-/* DASH.js controls overlay */
-.dash-controls{
-  position:absolute;
-  bottom:10px;
-  left:50%;
-  transform:translateX(-50%);
-  display:flex;
-  gap:8px;
-  z-index:30;
-}
-
-.control-btn{
-  background:rgba(0,0,0,.7);
-  border:1px solid rgba(255,255,255,.2);
-  color:#fff;
-  padding:8px 14px;
-  border-radius:20px;
-  cursor:pointer;
-  font-size:.7rem;
-  display:flex;
-  align-items:center;
-  gap:5px;
-  transition:.2s;
-}
-
-.control-btn:hover{
-  background:rgba(229,62,62,.5);
-  border-color:#e53e3e;
-}
-
-@media(max-width:768px){
-  .top-bar{padding:6px 10px}
-  .channel-name{font-size:.8rem}
+.debug-info{
+  position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,.7);
+  padding:5px 10px;border-radius:10px;font-size:11px;z-index:5;
 }
 </style>
 </head>
 <body>
 
-<!-- Top Bar -->
-<div class="top-bar">
-  <a href="index.html" class="back-btn">
-    <i class="fas fa-arrow-left"></i> Channels
-  </a>
-  
-  <div class="channel-info">
-    <i class="fas fa-tv" style="opacity:.5"></i>
-    <div class="channel-name" id="chName">Loading...</div>
-  </div>
-  
-  <div class="live-badge">
-    <span class="live-dot"></span> LIVE
-  </div>
+<div class="topbar">
+  <a href="index.html" class="back-btn">← Back</a>
+  <span class="ch-name" id="channelName">Loading...</span>
+  <span class="live-tag">● LIVE</span>
 </div>
 
-<!-- Player -->
-<div class="player-container" id="playerContainer">
-  <video id="videoPlayer" autoplay playsinline controls></video>
-  
-  <div class="loading-overlay" id="loadingOverlay">
+<div class="player-wrap" id="playerWrap">
+  <div class="loading" id="loading">
     <div class="spinner"></div>
-    <span id="loadingText">Loading stream...</span>
+    <span>Loading stream...</span>
   </div>
   
-  <div class="error-overlay hidden" id="errorOverlay">
-    <div class="error-icon"><i class="fas fa-exclamation-circle"></i></div>
-    <div class="error-msg" id="errorMsg">Stream error</div>
-    <div class="btns">
-      <button class="btn btn-red" onclick="initPlayer()">
-        <i class="fas fa-redo-alt"></i> Retry
-      </button>
-      <button class="btn btn-blue" onclick="openInNewTab()">
-        <i class="fas fa-external-link-alt"></i> Open in Browser
-      </button>
-      <a href="index.html" class="btn btn-gray">
-        <i class="fas fa-th-list"></i> Channels
-      </a>
+  <div class="error-msg hidden" id="errorBox">
+    <p id="errorText">Stream error</p>
+    <div>
+      <button class="btn btn-red" onclick="tryPlay()">Retry</button>
+      <button class="btn btn-blue" onclick="openDirect()">Open Direct</button>
+      <a href="index.html" class="btn" style="background:#444;text-decoration:none">Channels</a>
     </div>
   </div>
   
-  <div class="status-bar" id="statusBar">Initializing...</div>
+  <div class="debug-info" id="debugInfo">Ready</div>
 </div>
 
 <script>
-// ===== GET URL PARAMETERS =====
-const params = new URLSearchParams(window.location.search);
-const channelName = params.get('name') || 'Live Stream';
-const streamUrl = params.get('url') || '';
-const contentId = params.get('id') || '';
-let streamCookie = params.get('cookie') || '';
+// Get URL parameters
+const urlParams = new URLSearchParams(window.location.search);
+const chName = urlParams.get('name') || 'Live Stream';
+const streamUrl = urlParams.get('url') || '';
+const chId = urlParams.get('id') || '';
+const cookie = urlParams.get('cookie') || '';
 
-// Also try getting from localStorage
-try {
-  const stored = JSON.parse(localStorage.getItem('jiotv_current_channel'));
-  if (stored && stored.cookie && !streamCookie) {
-    streamCookie = stored.cookie;
-  }
-} catch(e) {}
+// DOM
+document.getElementById('channelName').textContent = chName;
+const playerWrap = document.getElementById('playerWrap');
+const loading = document.getElementById('loading');
+const errorBox = document.getElementById('errorBox');
+const errorText = document.getElementById('errorText');
+const debugInfo = document.getElementById('debugInfo');
 
-// ===== DOM ELEMENTS =====
-const chNameEl = document.getElementById('chName');
-const loadingOverlay = document.getElementById('loadingOverlay');
-const loadingText = document.getElementById('loadingText');
-const errorOverlay = document.getElementById('errorOverlay');
-const errorMsg = document.getElementById('errorMsg');
-const statusBar = document.getElementById('statusBar');
-const videoPlayer = document.getElementById('videoPlayer');
-
-// Set channel name
-chNameEl.textContent = channelName;
-
-// ===== LOGGING =====
-function updateStatus(msg) {
-  statusBar.textContent = msg;
-  console.log('[JioTV+]', msg);
+function log(msg) {
+  console.log('[Player]', msg);
+  debugInfo.textContent = msg;
 }
 
 function showError(msg) {
-  loadingOverlay.classList.add('hidden');
-  errorMsg.textContent = msg;
-  errorOverlay.classList.remove('hidden');
-  updateStatus('ERROR: ' + msg);
+  loading.classList.add('hidden');
+  errorText.textContent = msg;
+  errorBox.classList.remove('hidden');
+  log('ERROR: ' + msg);
 }
 
-function openInNewTab() {
-  if (streamUrl) {
-    window.open(streamUrl, '_blank');
-  }
+function openDirect() {
+  if (streamUrl) window.open(streamUrl, '_blank');
 }
 
-// ===== MAIN PLAYER INIT =====
-let dashPlayer = null;
-
-function initPlayer() {
+// Main play function
+function tryPlay() {
   if (!streamUrl) {
-    showError('No stream URL provided. Go back and select a channel.');
+    showError('No stream URL');
     return;
   }
   
-  // Show loading
-  loadingOverlay.classList.remove('hidden');
-  loadingText.textContent = 'Loading stream...';
-  errorOverlay.classList.add('hidden');
-  updateStatus('Starting DASH player...');
+  loading.classList.remove('hidden');
+  errorBox.classList.add('hidden');
+  log('Starting...');
   
-  console.log('========================================');
-  console.log('Channel:', channelName);
-  console.log('Stream URL:', streamUrl);
-  console.log('Content ID:', contentId);
-  console.log('Cookie:', streamCookie ? streamCookie.substring(0, 50) + '...' : 'NONE');
-  console.log('========================================');
+  console.log('Channel:', chName);
+  console.log('URL:', streamUrl);
+  console.log('Cookie:', cookie ? 'Present' : 'None');
   
-  // Clean up previous player
-  if (dashPlayer) {
-    try { dashPlayer.destroy(); } catch(e) {}
-    dashPlayer = null;
-  }
+  // Clear previous
+  playerWrap.querySelectorAll('iframe,video').forEach(el => el.remove());
   
-  // Reset video
-  videoPlayer.src = '';
-  
-  // Start DASH.js player
-  startDashPlayer();
+  // Try method 1: Direct iframe with cookie via proxy approach
+  tryMethod1();
 }
 
-// ===== DASH.JS PLAYER =====
-function startDashPlayer() {
-  updateStatus('Creating DASH player...');
+// Method 1: Create HTML page that sets cookie then loads stream
+function tryMethod1() {
+  log('Method 1: Cookie injection...');
   
-  // Create DASH player
-  dashPlayer = dashjs.MediaPlayer().create();
+  const iframe = document.createElement('iframe');
+  iframe.allow = 'autoplay; fullscreen';
+  iframe.allowFullscreen = true;
   
-  // Configure DASH player
-  dashPlayer.updateSettings({
-    streaming: {
-      lowLatencyEnabled: false,
-      liveDelay: 3,
-      stableBufferTime: 10,
-      bufferTimeAtTopQuality: 15,
-      bufferTimeAtTopQualityLongForm: 20,
-      jumpGaps: true,
-      jumpLargeGaps: true
-    },
-    abr: {
-      autoSwitchBitrate: { video: true },
-      fetchThroughputCalculationMode: 'downloadScheduledTime'
+  // Create a blob with HTML that sets cookie before loading
+  const proxyHtml = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <script src="https://cdn.dashjs.org/latest/dash.all.min.js"><\/script>
+      <style>
+        *{margin:0;padding:0;background:#000}
+        video{width:100vw;height:100vh;object-fit:contain}
+      <\/style>
+    <\/head>
+    <body>
+      <video id="v" autoplay playsinline controls><\/video>
+      <script>
+        // Set cookie
+        document.cookie = '${cookie.replace(/'/g, "\\'")};path=/;SameSite=None;Secure';
+        
+        // Initialize DASH player
+        const player = dashjs.MediaPlayer().create();
+        
+        player.extend('RequestModifier', function() {
+          return {
+            modifyRequestHeader: function(xhr) {
+              xhr.setRequestHeader('Cookie', '${cookie.replace(/'/g, "\\'")}');
+              return xhr;
+            }
+          };
+        });
+        
+        player.initialize(document.getElementById('v'), '${streamUrl}', true);
+        
+        player.on('playbackPlaying', function() {
+          parent.postMessage('playing', '*');
+        });
+        
+        player.on('error', function() {
+          parent.postMessage('error', '*');
+        });
+      <\/script>
+    <\/body>
+    </html>
+  `;
+  
+  const blob = new Blob([proxyHtml], {type: 'text/html'});
+  iframe.src = URL.createObjectURL(blob);
+  
+  iframe.onload = function() {
+    log('Player loaded');
+    // Give it time to start
+    setTimeout(function() {
+      loading.classList.add('hidden');
+    }, 5000);
+  };
+  
+  playerWrap.appendChild(iframe);
+  
+  // Listen for messages from iframe
+  window.addEventListener('message', function(e) {
+    if (e.data === 'playing') {
+      loading.classList.add('hidden');
+      log('Playing');
+    } else if (e.data === 'error') {
+      // Try next method
+      tryMethod2();
     }
   });
   
-  // Apply cookie for authentication
-  if (streamCookie) {
-    updateStatus('Applying authentication cookie...');
-    
-    // Set cookie in document
-    try {
-      const cookieParts = streamCookie.split(';')[0]; // Get first cookie
-      document.cookie = cookieParts + ';path=/;SameSite=None;Secure';
-      console.log('Cookie set in document');
-    } catch(e) {
-      console.warn('Failed to set document cookie:', e);
+  // Timeout
+  setTimeout(function() {
+    if (!loading.classList.contains('hidden')) {
+      log('Method 1 timeout, trying method 2...');
+      tryMethod2();
     }
-    
-    // Use DASH.js custom request modifier
-    dashPlayer.extend('RequestModifier', function() {
-      return {
-        modifyRequestHeader: function(xhr) {
-          xhr.setRequestHeader('Cookie', streamCookie);
-          return xhr;
-        },
-        modifyRequestURL: function(url) {
-          return url;
-        }
-      };
-    });
-    
-    console.log('DASH.js request modifier added');
+  }, 15000);
+}
+
+// Method 2: Direct video with DASH.js in main page
+function tryMethod2() {
+  log('Method 2: Direct DASH.js...');
+  
+  // Clear
+  playerWrap.querySelectorAll('iframe').forEach(el => el.remove());
+  
+  const video = document.createElement('video');
+  video.autoplay = true;
+  video.playsInline = true;
+  video.controls = true;
+  video.style.width = '100%';
+  video.style.height = '100%';
+  video.style.objectFit = 'contain';
+  playerWrap.appendChild(video);
+  
+  // Set cookie
+  if (cookie) {
+    document.cookie = cookie.split(';')[0] + ';path=/;SameSite=None;Secure';
   }
   
-  // Set up event listeners
-  dashPlayer.on('streamInitialized', function() {
-    updateStatus('Stream initialized - buffering...');
-    loadingText.textContent = 'Buffering stream...';
-    console.log('DASH: Stream initialized');
-  });
-  
-  dashPlayer.on('playbackPlaying', function() {
-    updateStatus('▶ Playing');
-    loadingOverlay.classList.add('hidden');
-    console.log('DASH: Playback started');
-  });
-  
-  dashPlayer.on('playbackPaused', function() {
-    updateStatus('⏸ Paused');
-  });
-  
-  dashPlayer.on('playbackWaiting', function() {
-    updateStatus('Buffering...');
-    loadingOverlay.classList.remove('hidden');
-    loadingText.textContent = 'Buffering...';
-  });
-  
-  dashPlayer.on('playbackError', function(e) {
-    console.error('DASH: Playback error:', e);
-    showError('Playback error. Stream may be offline or cookie expired.');
-  });
-  
-  dashPlayer.on('error', function(e) {
-    console.error('DASH: Error:', e);
-    if (e.error === 'manifestError' || e.error === 'download') {
-      showError('Cannot load stream manifest. The channel may be offline.');
-    }
-  });
-  
-  dashPlayer.on('qualityChangeRendered', function(e) {
-    const q = e.mediaType === 'video' ? e.newQuality : null;
-    if (q) {
-      updateStatus('Quality: ' + (q.height || 'auto') + 'p @ ' + Math.round(q.bitrate/1000) + 'kbps');
-    }
-  });
-  
-  // Initialize with stream URL
+  // Check if dash.js is loaded
+  if (typeof dashjs === 'undefined') {
+    // Load dash.js dynamically
+    const script = document.createElement('script');
+    script.src = 'https://cdn.dashjs.org/latest/dash.all.min.js';
+    script.onload = function() {
+      initDashPlayer(video);
+    };
+    script.onerror = function() {
+      tryMethod3();
+    };
+    document.head.appendChild(script);
+  } else {
+    initDashPlayer(video);
+  }
+}
+
+function initDashPlayer(video) {
   try {
-    dashPlayer.initialize(videoPlayer, streamUrl, true);
-    console.log('DASH: Player initialized');
+    const player = dashjs.MediaPlayer().create();
     
-    // Auto-play
-    videoPlayer.play().catch(function(err) {
-      console.warn('Auto-play blocked:', err.message);
-      updateStatus('Click to start playback');
-      loadingOverlay.classList.add('hidden');
+    if (cookie) {
+      player.extend('RequestModifier', function() {
+        return {
+          modifyRequestHeader: function(xhr) {
+            xhr.setRequestHeader('Cookie', cookie);
+            return xhr;
+          }
+        };
+      });
+    }
+    
+    player.initialize(video, streamUrl, true);
+    
+    player.on('playbackPlaying', function() {
+      loading.classList.add('hidden');
+      log('▶ Playing via DASH.js');
+    });
+    
+    player.on('error', function(e) {
+      console.error('DASH error:', e);
+      tryMethod3();
+    });
+    
+    video.play().catch(function() {
+      log('Click to start');
+      loading.classList.add('hidden');
     });
     
   } catch(e) {
-    console.error('DASH initialization error:', e);
-    showError('Failed to initialize DASH player.');
+    console.error('DASH init error:', e);
+    tryMethod3();
   }
   
-  // Timeout safety
+  // Timeout
   setTimeout(function() {
-    if (!loadingOverlay.classList.contains('hidden')) {
-      console.log('Loading timeout - stream may be slow');
-      updateStatus('Still loading... (slow connection)');
-      loadingText.textContent = 'Still loading... Check connection';
+    if (!loading.classList.contains('hidden')) {
+      tryMethod3();
     }
-  }, 15000);
-  
-  // Extended timeout
-  setTimeout(function() {
-    if (!loadingOverlay.classList.contains('hidden')) {
-      console.log('Extended timeout - stream may be offline');
-      showError('Stream taking too long. Channel may be offline or cookie expired.');
-    }
-  }, 30000);
+  }, 12000);
 }
 
-// ===== KEYBOARD SHORTCUTS =====
-document.addEventListener('keydown', function(e) {
-  switch(e.key) {
-    case 'Escape':
-      window.location.href = 'index.html';
-      break;
-    case 'f':
-    case 'F':
-      if (!e.ctrlKey && !e.metaKey) {
-        if (document.fullscreenElement) {
-          document.exitFullscreen();
-        } else {
-          document.getElementById('playerContainer').requestFullscreen();
-        }
-      }
-      break;
-    case ' ':
-      e.preventDefault();
-      if (videoPlayer.paused) {
-        videoPlayer.play();
-      } else {
-        videoPlayer.pause();
-      }
-      break;
-  }
-});
+// Method 3: Simple iframe
+function tryMethod3() {
+  log('Method 3: Simple iframe...');
+  
+  playerWrap.querySelectorAll('iframe,video').forEach(el => el.remove());
+  
+  const iframe = document.createElement('iframe');
+  iframe.src = streamUrl;
+  iframe.allow = 'autoplay; fullscreen';
+  iframe.allowFullscreen = true;
+  
+  iframe.onload = function() {
+    loading.classList.add('hidden');
+    log('Iframe loaded');
+  };
+  
+  iframe.onerror = function() {
+    showError('All methods failed. Try opening directly.');
+  };
+  
+  playerWrap.appendChild(iframe);
+  
+  setTimeout(function() {
+    loading.classList.add('hidden');
+  }, 8000);
+}
 
-// ===== INIT =====
+// Start
 if (streamUrl) {
-  initPlayer();
+  tryPlay();
 } else {
-  showError('No stream URL found. Please go back and select a channel from the list.');
+  showError('No stream URL. Go back and select a channel.');
 }
 
-// ===== PAGE UNLOAD CLEANUP =====
-window.addEventListener('beforeunload', function() {
-  if (dashPlayer) {
-    try { dashPlayer.destroy(); } catch(e) {}
-  }
+// Keyboard
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') window.location.href = 'index.html';
 });
-
-console.log('JioTV+ Player ready');
-console.log('Channel:', channelName);
 </script>
 </body>
 </html>
