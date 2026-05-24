@@ -1,34 +1,816 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Redirecting...</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0c10">
+<meta property="og:title" content="JioTV+ LIVE | 600+ HD Channels Free">
+<meta property="og:description" content="Watch Live Sports, News, Entertainment, Movies in HD Quality">
+<meta property="og:image" content="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQq-VwWgAPYQ70k1R60meu_P-lN85uhvxb1Hg&usqp=CAU">
+<title>JioTV+ LIVE | 600+ Channels Dashboard</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,300;14..32,400;14..32,600;14..32,700;14..32,800&display=swap');
 
-<script>
-window.onload = function () {
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,sans-serif}
 
-    // Worker URL
-    const workerURL = "https://jiotv.gojo45749.workers.dev/";
+:root{
+  --primary:#e53e3e;
+  --dark-bg:#0a0c10;
+  --dark-surface:#14171c;
+  --dark-card:#1a1e24;
+  --dark-border:#2d3138;
+  --dark-text:#edf2f7;
+  --live-red:#ef4444;
+  --upcoming-color:#f59e0b;
+}
 
-    // Telegram Channel
-    const telegramURL = "https://t.me/stream4khub";
+body{
+  background:var(--dark-bg);
+  color:var(--dark-text);
+  min-height:100vh;
+  line-height:1.5;
+}
 
-    // Open Worker URL
-    window.open(workerURL, "_blank");
+/* ===== HEADER ===== */
+.glass-header{
+  background:rgba(10,12,16,.85);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--dark-border);
+  position:sticky;
+  top:0;
+  z-index:100;
+  padding:.75rem 1.5rem;
+}
 
-    // Redirect to Telegram
-    setTimeout(() => {
-        window.location.href = telegramURL;
-    }, 1000);
+.header-container{
+  max-width:1400px;
+  margin:0 auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:1rem;
+}
 
-};
-</script>
+.logo-area{
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+}
 
+.logo-icon{
+  background:var(--primary);
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.4rem;
+  box-shadow:0 4px 12px rgba(229,62,62,.3);
+}
+
+.logo-text{
+  font-size:1.6rem;
+  font-weight:800;
+  letter-spacing:-.5px;
+  background:linear-gradient(135deg,#fff 30%,#e53e3e 80%);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+
+.badge-new{
+  background:var(--primary);
+  font-size:.7rem;
+  padding:.2rem .6rem;
+  border-radius:40px;
+  font-weight:600;
+  color:#fff;
+}
+
+.controls-group{
+  display:flex;
+  gap:.75rem;
+  align-items:center;
+}
+
+.icon-btn{
+  background:var(--dark-surface);
+  border:none;
+  width:42px;
+  height:42px;
+  border-radius:30px;
+  cursor:pointer;
+  font-size:1.1rem;
+  color:var(--dark-text);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  transition:all .2s;
+}
+
+.icon-btn:hover{
+  background:var(--primary);
+  color:#fff;
+}
+
+/* ===== SEARCH ===== */
+.search-container{
+  max-width:1400px;
+  margin:1rem auto;
+  padding:0 1.5rem;
+}
+
+.search-wrapper{
+  position:relative;
+  max-width:500px;
+}
+
+.search-input{
+  width:100%;
+  padding:12px 20px 12px 45px;
+  background:var(--dark-surface);
+  border:2px solid var(--dark-border);
+  border-radius:30px;
+  color:var(--dark-text);
+  font-size:.9rem;
+  outline:none;
+  transition:all .3s;
+}
+
+.search-input:focus{
+  border-color:var(--primary);
+  box-shadow:0 0 20px rgba(229,62,62,.15);
+}
+
+.search-input::placeholder{
+  color:#666;
+}
+
+.search-icon{
+  position:absolute;
+  left:16px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#666;
+  font-size:.9rem;
+}
+
+/* ===== FILTER BAR ===== */
+.filter-bar{
+  max-width:1400px;
+  margin:1.2rem auto 0;
+  padding:0 1.5rem;
+  display:flex;
+  gap:.5rem;
+  flex-wrap:wrap;
+  align-items:center;
+  overflow-x:auto;
+}
+
+.filter-tab{
+  background:var(--dark-surface);
+  border:1px solid var(--dark-border);
+  color:var(--dark-text);
+  padding:.4rem 1rem;
+  border-radius:40px;
+  font-size:.8rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:all .2s;
+  white-space:nowrap;
+}
+
+.filter-tab:hover,
+.filter-tab.active{
+  background:var(--primary);
+  border-color:var(--primary);
+  color:#fff;
+}
+
+/* ===== STATS BAR ===== */
+.stats-bar{
+  max-width:1400px;
+  margin:1rem auto 0;
+  padding:0 1.5rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:1rem;
+}
+
+.update-timestamp{
+  background:var(--dark-surface);
+  padding:.4rem 1rem;
+  border-radius:60px;
+  font-size:.8rem;
+  font-weight:500;
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+}
+
+.badges-row{
+  display:flex;
+  gap:.6rem;
+  align-items:center;
+  flex-wrap:wrap;
+}
+
+.live-badge-counter{
+  background:var(--live-red);
+  padding:.4rem 1.1rem;
+  border-radius:60px;
+  font-weight:700;
+  font-size:.85rem;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#fff;
+  box-shadow:0 0 8px rgba(239,68,68,.5);
+}
+
+.pulse-dot{
+  width:10px;
+  height:10px;
+  background:#fff;
+  border-radius:50%;
+  animation:pulseR 1.2s infinite alternate;
+}
+
+@keyframes pulseR{
+  0%{opacity:.4;transform:scale(.8)}
+  100%{opacity:1;transform:scale(1.2)}
+}
+
+/* ===== MAIN CONTENT ===== */
+.main-content{
+  max-width:1400px;
+  margin:2rem auto;
+  padding:0 1.5rem;
+}
+
+.channels-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:1.2rem;
+}
+
+.channel-card{
+  background:var(--dark-card);
+  border-radius:16px;
+  overflow:hidden;
+  box-shadow:0 8px 24px -8px rgba(0,0,0,.3);
+  transition:all .3s;
+  border:1px solid var(--dark-border);
+  cursor:pointer;
+  text-decoration:none;
+  color:inherit;
+  display:flex;
+  flex-direction:column;
+}
+
+.channel-card:hover{
+  transform:translateY(-4px);
+  box-shadow:0 16px 32px -8px rgba(229,62,62,.2);
+  border-color:var(--primary);
+}
+
+.card-media{
+  position:relative;
+  height:160px;
+  overflow:hidden;
+  background:linear-gradient(135deg,#1a1e24,#0f1117);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+.channel-logo{
+  width:80px;
+  height:80px;
+  border-radius:16px;
+  object-fit:contain;
+  background:rgba(255,255,255,.05);
+  padding:8px;
+}
+
+.channel-icon-placeholder{
+  font-size:3rem;
+  opacity:.3;
+}
+
+.live-tag{
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:#ef4444;
+  padding:3px 10px;
+  border-radius:40px;
+  font-size:.65rem;
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  gap:4px;
+  color:#fff;
+}
+
+.category-tag{
+  position:absolute;
+  bottom:10px;
+  right:10px;
+  background:rgba(0,0,0,.65);
+  backdrop-filter:blur(4px);
+  padding:3px 10px;
+  border-radius:30px;
+  font-size:.65rem;
+  font-weight:600;
+  color:#fff;
+}
+
+.language-tag{
+  position:absolute;
+  bottom:10px;
+  left:10px;
+  background:rgba(0,0,0,.65);
+  backdrop-filter:blur(4px);
+  padding:3px 10px;
+  border-radius:30px;
+  font-size:.65rem;
+  font-weight:600;
+  color:#f59e0b;
+}
+
+.card-info{
+  padding:1rem;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+.channel-name{
+  font-size:1rem;
+  font-weight:700;
+  margin-bottom:4px;
+  line-height:1.3;
+}
+
+.channel-group{
+  font-size:.72rem;
+  color:#a0aec0;
+  margin-bottom:8px;
+}
+
+.watch-btn{
+  width:100%;
+  background:linear-gradient(105deg,var(--primary) 0%,#c53030 100%);
+  border:none;
+  padding:10px 0;
+  border-radius:60px;
+  font-weight:700;
+  font-size:.85rem;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  cursor:pointer;
+  transition:all .2s;
+  color:#fff;
+  margin-top:auto;
+}
+
+.watch-btn:hover{
+  transform:scale(.98);
+  filter:brightness(1.06);
+}
+
+/* ===== LOADING ===== */
+.loading-state{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  padding:5rem;
+  gap:1rem;
+  grid-column:1/-1;
+}
+
+.spinner{
+  width:48px;
+  height:48px;
+  border:4px solid rgba(229,62,62,.2);
+  border-top:4px solid var(--primary);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+
+@keyframes spin{
+  to{transform:rotate(360deg)}
+}
+
+.empty-state{
+  text-align:center;
+  padding:3rem;
+  opacity:.5;
+  grid-column:1/-1;
+}
+
+.empty-state i{
+  font-size:3rem;
+  margin-bottom:1rem;
+  display:block;
+}
+
+/* ===== FOOTER ===== */
+footer{
+  background:var(--dark-surface);
+  padding:2rem;
+  text-align:center;
+  border-top:1px solid var(--dark-border);
+  margin-top:3rem;
+  font-size:.75rem;
+  opacity:.6;
+}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  .channels-grid{
+    grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:.8rem;
+  }
+  
+  .card-media{
+    height:120px;
+  }
+  
+  .channel-logo{
+    width:60px;
+    height:60px;
+  }
+  
+  .channel-name{
+    font-size:.85rem;
+  }
+  
+  .logo-text{
+    font-size:1.2rem;
+  }
+  
+  .header-container{
+    flex-direction:column;
+    align-items:stretch;
+  }
+  
+  .controls-group{
+    justify-content:flex-end;
+  }
+}
+
+@media(max-width:480px){
+  .channels-grid{
+    grid-template-columns:repeat(2,1fr);
+  }
+}
+</style>
 </head>
 <body>
 
-<h2>Redirecting...</h2>
+<!-- HEADER -->
+<header class="glass-header">
+  <div class="header-container">
+    <div class="logo-area">
+      <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+      <div class="logo-text">Jio<span style="color:var(--primary)">TV+</span></div>
+      <span class="badge-new">LIVE</span>
+    </div>
+    <div class="controls-group">
+      <button class="icon-btn refresh-btn" id="refreshBtn" title="Refresh"><i class="fas fa-sync-alt"></i></button>
+      <button class="icon-btn" id="themeBtn" title="Toggle theme"><i class="fas fa-moon"></i></button>
+    </div>
+  </div>
+</header>
 
+<!-- SEARCH -->
+<div class="search-container">
+  <div class="search-wrapper">
+    <i class="fas fa-search search-icon"></i>
+    <input type="text" class="search-input" id="searchInput" placeholder="Search 600+ channels...">
+  </div>
+</div>
+
+<!-- FILTER BAR -->
+<div class="filter-bar" id="filterBar">
+  <button class="filter-tab active" data-group="all">All Channels</button>
+</div>
+
+<!-- STATS BAR -->
+<div class="stats-bar">
+  <div class="update-timestamp">
+    <i class="far fa-clock"></i> 
+    <span id="lastUpdated">Loading...</span>
+  </div>
+  <div class="badges-row">
+    <div class="live-badge-counter">
+      <span class="pulse-dot"></span> 
+      <span id="channelCount">0</span> Channels
+    </div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="main-content">
+  <div class="channels-grid" id="channelsGrid">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading channels...</p>
+    </div>
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div>© 2025 JioTV+ Streamer | For Educational Purposes Only</div>
+  <div style="margin-top:.5rem">We do not host any content. All streams are from public sources.</div>
+</footer>
+
+<!-- Cloudflare Analytics -->
+<script defer src='https://static.cloudflareinsights.com/beacon.min.js' data-cf-beacon='{"token": "30a9419071b14393b0d4f3a5aa042e5d"}'></script>
+
+<script>
+// ===== CONFIGURATION =====
+const M3U_API = 'https://jiotvplus.dr-strange.workers.dev/api/jiotvplus.m3u';
+const CACHE_KEY = 'jiotv_channels';
+const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+
+// ===== DOM ELEMENTS =====
+const $ = id => document.getElementById(id);
+const channelsGrid = $('channelsGrid');
+const filterBar = $('filterBar');
+const searchInput = $('searchInput');
+const lastUpdated = $('lastUpdated');
+const channelCount = $('channelCount');
+const refreshBtn = $('refreshBtn');
+const themeBtn = $('themeBtn');
+
+let allChannels = [];
+let activeGroup = 'all';
+
+// ===== THEME =====
+function applyTheme(t) {
+  document.body.setAttribute('data-theme', t);
+  localStorage.setItem('jiotv_theme', t);
+  themeBtn.innerHTML = t === 'dark' ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+}
+(function() {
+  const saved = localStorage.getItem('jiotv_theme');
+  const prefers = window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
+  applyTheme(saved || prefers);
+})();
+themeBtn.addEventListener('click', () => {
+  const current = document.body.getAttribute('data-theme');
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+// ===== PARSE M3U =====
+function parseM3U(content) {
+  const channels = [];
+  const lines = content.split('\n');
+  let currentChannel = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    if (line.startsWith('#EXTINF:')) {
+      currentChannel = {};
+      
+      // Extract attributes
+      const tvgId = line.match(/tvg-id="([^"]*)"/);
+      const tvgName = line.match(/tvg-name="([^"]*)"/);
+      const tvgLogo = line.match(/tvg-logo="([^"]*)"/);
+      const groupTitle = line.match(/group-title="([^"]*)"/);
+      const tvgLanguage = line.match(/tvg-language="([^"]*)"/);
+      
+      // Extract name after comma
+      const nameMatch = line.match(/,(.+)$/);
+      
+      currentChannel.id = tvgId ? tvgId[1] : '';
+      currentChannel.name = nameMatch ? nameMatch[1].trim() : (tvgName ? tvgName[1] : 'Unknown');
+      currentChannel.logo = tvgLogo ? tvgLogo[1] : '';
+      currentChannel.group = groupTitle ? groupTitle[1] : 'Other';
+      currentChannel.language = tvgLanguage ? tvgLanguage[1] : '';
+      
+    } else if (line.startsWith('http') && currentChannel) {
+      currentChannel.url = line;
+      channels.push(currentChannel);
+      currentChannel = null;
+    }
+  }
+  
+  return channels;
+}
+
+// ===== FETCH CHANNELS =====
+async function fetchChannels(forceRefresh = false) {
+  // Check cache
+  if (!forceRefresh) {
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        if (Date.now() - data.timestamp < CACHE_DURATION) {
+          return data.channels;
+        }
+      } catch(e) {}
+    }
+  }
+
+  try {
+    const response = await fetch(M3U_API);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    
+    const content = await response.text();
+    const channels = parseM3U(content);
+    
+    // Cache
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      timestamp: Date.now(),
+      channels: channels
+    }));
+    
+    return channels;
+  } catch(e) {
+    console.error('Failed to fetch channels:', e);
+    
+    // Try cache as fallback
+    const cached = localStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const data = JSON.parse(cached);
+        return data.channels;
+      } catch(e2) {}
+    }
+    
+    return [];
+  }
+}
+
+// ===== BUILD FILTERS =====
+function buildFilters() {
+  const groups = new Set();
+  allChannels.forEach(ch => {
+    if (ch.group) groups.add(ch.group);
+  });
+  
+  const sortedGroups = [...groups].sort();
+  
+  filterBar.innerHTML = '<button class="filter-tab active" data-group="all">All Channels</button>';
+  sortedGroups.forEach(group => {
+    const btn = document.createElement('button');
+    btn.className = 'filter-tab';
+    btn.dataset.group = group;
+    btn.textContent = group;
+    btn.addEventListener('click', () => filterByGroup(group));
+    filterBar.appendChild(btn);
+  });
+}
+
+function filterByGroup(group) {
+  activeGroup = group;
+  
+  // Update active tab
+  filterBar.querySelectorAll('.filter-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.group === group);
+  });
+  
+  renderChannels();
+}
+
+// ===== RENDER CHANNELS =====
+function renderChannels() {
+  let filtered = allChannels;
+  
+  // Filter by group
+  if (activeGroup !== 'all') {
+    filtered = filtered.filter(ch => ch.group === activeGroup);
+  }
+  
+  // Filter by search
+  const searchTerm = searchInput.value.toLowerCase().trim();
+  if (searchTerm) {
+    filtered = filtered.filter(ch => 
+      ch.name.toLowerCase().includes(searchTerm) ||
+      (ch.group && ch.group.toLowerCase().includes(searchTerm)) ||
+      (ch.language && ch.language.toLowerCase().includes(searchTerm))
+    );
+  }
+  
+  // Update count
+  channelCount.textContent = filtered.length;
+  
+  // Render
+  if (filtered.length === 0) {
+    channelsGrid.innerHTML = `
+      <div class="empty-state">
+        <i class="fas fa-search"></i>
+        <p>No channels found</p>
+        <p style="font-size:.8rem;margin-top:.5rem">Try a different search or filter</p>
+      </div>
+    `;
+    return;
+  }
+  
+  channelsGrid.innerHTML = '';
+  
+  filtered.forEach((channel, index) => {
+    const card = document.createElement('div');
+    card.className = 'channel-card';
+    card.onclick = () => openPlayer(channel);
+    
+    const logoHtml = channel.logo 
+      ? `<img class="channel-logo" src="${escapeHtml(channel.logo)}" alt="${escapeHtml(channel.name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><i class="fas fa-tv channel-icon-placeholder" style="display:none"></i>`
+      : '<i class="fas fa-tv channel-icon-placeholder"></i>';
+    
+    card.innerHTML = `
+      <div class="card-media">
+        ${logoHtml}
+        <div class="live-tag"><i class="fas fa-circle" style="font-size:.35rem"></i> LIVE</div>
+        ${channel.language ? `<div class="language-tag">${escapeHtml(channel.language)}</div>` : ''}
+        <div class="category-tag">${escapeHtml(channel.group || 'TV')}</div>
+      </div>
+      <div class="card-info">
+        <div class="channel-name">${escapeHtml(channel.name)}</div>
+        <div class="channel-group">${escapeHtml(channel.group || 'General')}</div>
+        <button class="watch-btn">
+          <i class="fas fa-play-circle"></i> WATCH NOW
+        </button>
+      </div>
+    `;
+    
+    channelsGrid.appendChild(card);
+  });
+}
+
+// ===== OPEN PLAYER =====
+function openPlayer(channel) {
+  const params = new URLSearchParams({
+    name: channel.name,
+    url: channel.url,
+    logo: channel.logo || '',
+    group: channel.group || ''
+  });
+  
+  window.location.href = 'player.html?' + params.toString();
+}
+
+// ===== UTILS =====
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+// ===== EVENT LISTENERS =====
+searchInput.addEventListener('input', renderChannels);
+
+refreshBtn.addEventListener('click', async () => {
+  refreshBtn.style.transform = 'rotate(360deg)';
+  refreshBtn.style.transition = 'transform .6s ease';
+  
+  channelsGrid.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Refreshing channels...</p></div>';
+  
+  allChannels = await fetchChannels(true);
+  buildFilters();
+  renderChannels();
+  
+  lastUpdated.textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  
+  setTimeout(() => {
+    refreshBtn.style.transform = 'rotate(0deg)';
+    refreshBtn.style.transition = 'none';
+  }, 600);
+});
+
+// ===== INIT =====
+async function init() {
+  allChannels = await fetchChannels();
+  buildFilters();
+  renderChannels();
+  lastUpdated.textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+  channelCount.textContent = allChannels.length;
+}
+
+init();
+
+// Auto-refresh every 30 minutes
+setInterval(async () => {
+  allChannels = await fetchChannels(true);
+  renderChannels();
+  lastUpdated.textContent = new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}, 1800000);
+</script>
 </body>
 </html>
