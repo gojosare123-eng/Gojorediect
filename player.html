@@ -1,26 +1,14 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#000000">
-<meta property="og:title" content="JioTV+ Live Stream">
-<meta property="og:description" content="Watch Live TV in HD Quality">
 <title>JioTV+ | Live Player</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-
-<!-- JW Player -->
 <script src="https://cdn.jwplayer.com/libraries/IDzF9Zmk.js"></script>
-
 <style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap');
-
-*{
-  margin:0;
-  padding:0;
-  box-sizing:border-box;
-  font-family:'Inter',system-ui,sans-serif;
-}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
 
 body{
   background:#000;
@@ -29,53 +17,49 @@ body{
   overflow:hidden;
 }
 
-/* ===== TOP BAR ===== */
+/* Top Bar */
 .top-bar{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:10px 16px;
+  padding:10px 15px;
   background:#0a0a0a;
-  border-bottom:1px solid #1e1e1e;
-  z-index:100;
+  border-bottom:1px solid #222;
   gap:10px;
   flex-wrap:wrap;
 }
 
 .back-btn{
-  background:rgba(255,255,255,.08);
+  background:rgba(255,255,255,.1);
   border:none;
   color:#fff;
   padding:8px 16px;
   border-radius:20px;
   cursor:pointer;
-  font-size:.84rem;
-  font-weight:500;
+  font-size:.85rem;
+  text-decoration:none;
   display:flex;
   align-items:center;
   gap:6px;
-  text-decoration:none;
-  transition:all .2s;
-  white-space:nowrap;
+  transition:.2s;
 }
 
 .back-btn:hover{
   background:#e53e3e;
-  color:#fff;
 }
 
 .channel-info{
   display:flex;
   align-items:center;
-  gap:12px;
+  gap:10px;
   flex:1;
   min-width:0;
 }
 
 .channel-logo{
-  width:38px;
-  height:38px;
-  border-radius:10px;
+  width:35px;
+  height:35px;
+  border-radius:8px;
   object-fit:contain;
   background:rgba(255,255,255,.05);
   flex-shrink:0;
@@ -86,7 +70,7 @@ body{
 }
 
 .channel-name{
-  font-size:.92rem;
+  font-size:.9rem;
   font-weight:700;
   white-space:nowrap;
   overflow:hidden;
@@ -95,8 +79,7 @@ body{
 
 .channel-group{
   font-size:.7rem;
-  opacity:.55;
-  margin-top:1px;
+  opacity:.5;
 }
 
 .live-badge{
@@ -109,12 +92,6 @@ body{
   font-size:.75rem;
   font-weight:700;
   flex-shrink:0;
-  animation:livePulse 2s infinite;
-}
-
-@keyframes livePulse{
-  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}
-  50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}
 }
 
 .live-dot{
@@ -130,42 +107,15 @@ body{
   100%{opacity:1;transform:scale(1.1)}
 }
 
-.player-actions{
-  display:flex;
-  gap:8px;
-  flex-shrink:0;
-}
-
-.action-btn{
-  background:rgba(255,255,255,.08);
-  border:none;
-  color:#fff;
-  padding:8px 14px;
-  border-radius:20px;
-  cursor:pointer;
-  font-size:.8rem;
-  font-weight:500;
-  display:flex;
-  align-items:center;
-  gap:6px;
-  text-decoration:none;
-  transition:all .2s;
-  white-space:nowrap;
-}
-
-.action-btn:hover{
-  background:#e53e3e;
-}
-
-/* ===== PLAYER CONTAINER ===== */
+/* Player Container */
 .player-wrapper{
   position:relative;
   width:100%;
-  height:calc(100vh - 62px);
+  height:calc(100vh - 60px);
   background:#000;
 }
 
-#jwplayer{
+#playerContainer{
   position:absolute;
   top:0;
   left:0;
@@ -173,101 +123,7 @@ body{
   height:100%;
 }
 
-/* ===== QUALITY SELECTOR OVERLAY ===== */
-.quality-panel{
-  position:fixed;
-  bottom:80px;
-  right:20px;
-  background:#1a1a1a;
-  border:1px solid #333;
-  border-radius:14px;
-  min-width:180px;
-  z-index:999;
-  overflow:hidden;
-  opacity:0;
-  transform:translateY(10px);
-  pointer-events:none;
-  transition:all .2s;
-  box-shadow:0 8px 32px rgba(0,0,0,.6);
-}
-
-.quality-panel.active{
-  opacity:1;
-  transform:translateY(0);
-  pointer-events:all;
-}
-
-.quality-header{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:14px 18px 10px;
-  border-bottom:1px solid #2a2a2a;
-  font-weight:700;
-  font-size:.9rem;
-  color:#fff;
-}
-
-.quality-close{
-  background:none;
-  border:none;
-  color:#999;
-  cursor:pointer;
-  font-size:1rem;
-  padding:4px;
-  border-radius:50%;
-  transition:all .15s;
-  width:28px;
-  height:28px;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-}
-
-.quality-close:hover{
-  background:#333;
-  color:#fff;
-}
-
-.quality-list{
-  padding:6px 0;
-}
-
-.quality-option{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  padding:12px 18px;
-  cursor:pointer;
-  font-size:.85rem;
-  font-weight:500;
-  color:#ccc;
-  transition:all .12s;
-  gap:12px;
-}
-
-.quality-option:hover{
-  background:#252525;
-  color:#fff;
-}
-
-.quality-option.active{
-  font-weight:700;
-  color:#fff;
-  background:rgba(229,62,62,.15);
-}
-
-.quality-check{
-  opacity:0;
-  color:#e53e3e;
-  font-size:.8rem;
-}
-
-.quality-option.active .quality-check{
-  opacity:1;
-}
-
-/* ===== LOADING OVERLAY ===== */
+/* Loading */
 .loading-overlay{
   position:absolute;
   inset:0;
@@ -276,19 +132,17 @@ body{
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:16px;
+  gap:15px;
   z-index:50;
-  transition:opacity .3s;
 }
 
 .loading-overlay.hidden{
-  opacity:0;
-  pointer-events:none;
+  display:none;
 }
 
 .spinner{
-  width:50px;
-  height:50px;
+  width:45px;
+  height:45px;
   border:4px solid rgba(229,62,62,.2);
   border-top:4px solid #e53e3e;
   border-radius:50%;
@@ -299,24 +153,19 @@ body{
   to{transform:rotate(360deg)}
 }
 
-.loading-text{
-  font-size:.9rem;
-  opacity:.8;
-}
-
-/* ===== ERROR OVERLAY ===== */
+/* Error */
 .error-overlay{
   position:absolute;
   inset:0;
-  background:rgba(0,0,0,.92);
+  background:rgba(0,0,0,.9);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:14px;
+  gap:15px;
   z-index:60;
   text-align:center;
-  padding:24px;
+  padding:20px;
 }
 
 .error-overlay.hidden{
@@ -328,43 +177,38 @@ body{
   color:#ef4444;
 }
 
-.error-title{
-  font-size:1.1rem;
-  font-weight:700;
-}
-
-.error-message{
-  font-size:.85rem;
-  opacity:.7;
+.error-msg{
+  font-size:.9rem;
+  opacity:.8;
   max-width:350px;
   line-height:1.5;
 }
 
-.error-buttons{
+.btns{
   display:flex;
   gap:10px;
-  margin-top:8px;
   flex-wrap:wrap;
   justify-content:center;
+  margin-top:10px;
 }
 
 .btn{
-  border:none;
-  padding:10px 22px;
+  padding:10px 20px;
   border-radius:25px;
   color:#fff;
   font-weight:600;
   cursor:pointer;
   font-size:.85rem;
+  border:none;
+  text-decoration:none;
   display:flex;
   align-items:center;
   gap:6px;
-  transition:all .2s;
-  text-decoration:none;
+  transition:.2s;
 }
 
 .btn:hover{
-  transform:scale(1.03);
+  transform:scale(1.05);
 }
 
 .btn-red{
@@ -375,80 +219,37 @@ body{
   background:#3b82f6;
 }
 
-.btn-outline{
-  background:transparent;
-  border:1px solid #555;
+.btn-gray{
+  background:#444;
 }
 
-.btn-outline:hover{
-  border-color:#e53e3e;
-  background:rgba(229,62,62,.1);
-}
-
-/* ===== RESPONSIVE ===== */
 @media(max-width:768px){
   .top-bar{
-    padding:8px 12px;
+    padding:8px 10px;
   }
-  
   .player-wrapper{
-    height:calc(100vh - 80px);
+    height:calc(100vh - 90px);
   }
-  
   .channel-name{
-    font-size:.82rem;
-  }
-  
-  .action-btn span{
-    display:none;
-  }
-  
-  .quality-panel{
-    right:10px;
-    bottom:70px;
-    min-width:160px;
-  }
-}
-
-@media(max-width:480px){
-  .top-bar{
-    gap:6px;
-  }
-  
-  .channel-info{
-    order:3;
-    width:100%;
-  }
-  
-  .player-wrapper{
-    height:calc(100vh - 110px);
+    font-size:.8rem;
   }
 }
 </style>
 </head>
 <body>
 
-<!-- TOP BAR -->
+<!-- Top Bar -->
 <div class="top-bar">
   <a href="index.html" class="back-btn">
-    <i class="fas fa-arrow-left"></i> Back
+    <i class="fas fa-arrow-left"></i> Channels
   </a>
   
   <div class="channel-info">
-    <img class="channel-logo" id="channelLogo" src="" alt="" onerror="this.style.display='none'">
+    <img class="channel-logo" id="chLogo" src="" alt="" onerror="this.style.display='none'">
     <div class="channel-details">
-      <div class="channel-name" id="channelNameDisplay">Loading Stream...</div>
-      <div class="channel-group" id="channelGroupDisplay"></div>
+      <div class="channel-name" id="chName">Loading...</div>
+      <div class="channel-group" id="chGroup"></div>
     </div>
-  </div>
-  
-  <div class="player-actions">
-    <button class="action-btn" id="qualityBtn">
-      <i class="fas fa-cog"></i> <span>Quality</span>
-    </button>
-    <a class="action-btn" id="newTabBtn" href="#" target="_blank">
-      <i class="fas fa-external-link-alt"></i> <span>New Tab</span>
-    </a>
   </div>
   
   <div class="live-badge">
@@ -456,165 +257,128 @@ body{
   </div>
 </div>
 
-<!-- PLAYER CONTAINER -->
-<div class="player-wrapper" id="playerWrapper">
-  <div id="jwplayer"></div>
+<!-- Player -->
+<div class="player-wrapper">
+  <div id="playerContainer"></div>
   
-  <!-- Quality Selector -->
-  <div class="quality-panel" id="qualityPanel">
-    <div class="quality-header">
-      <span>Video Quality</span>
-      <button class="quality-close" id="qualityClose">
-        <i class="fas fa-times"></i>
-      </button>
-    </div>
-    <div class="quality-list" id="qualityList">
-      <div class="quality-option active" data-quality="auto">
-        <span>Auto</span>
-        <span class="quality-check"><i class="fas fa-check"></i></span>
-      </div>
-      <div class="quality-option" data-quality="1080p">
-        <span>1080p HD</span>
-        <span class="quality-check"><i class="fas fa-check"></i></span>
-      </div>
-      <div class="quality-option" data-quality="720p">
-        <span>720p HD</span>
-        <span class="quality-check"><i class="fas fa-check"></i></span>
-      </div>
-      <div class="quality-option" data-quality="480p">
-        <span>480p</span>
-        <span class="quality-check"><i class="fas fa-check"></i></span>
-      </div>
-      <div class="quality-option" data-quality="360p">
-        <span>360p</span>
-        <span class="quality-check"><i class="fas fa-check"></i></span>
-      </div>
-    </div>
-  </div>
-  
-  <!-- Loading Overlay -->
   <div class="loading-overlay" id="loadingOverlay">
     <div class="spinner"></div>
-    <span class="loading-text">Buffering stream...</span>
+    <span>Loading stream...</span>
   </div>
   
-  <!-- Error Overlay -->
   <div class="error-overlay hidden" id="errorOverlay">
-    <div class="error-icon">
-      <i class="fas fa-exclamation-circle"></i>
-    </div>
-    <div class="error-title">Stream Error</div>
-    <div class="error-message" id="errorMessage">
-      Unable to load the stream. Please try again.
-    </div>
-    <div class="error-buttons">
+    <div class="error-icon"><i class="fas fa-exclamation-circle"></i></div>
+    <div class="error-msg" id="errorMsg">Stream error occurred.</div>
+    <div class="btns">
       <button class="btn btn-red" id="retryBtn">
         <i class="fas fa-redo-alt"></i> Retry
       </button>
-      <button class="btn btn-blue" id="newTabBtn2">
-        <i class="fas fa-external-link-alt"></i> Open in New Tab
+      <button class="btn btn-blue" id="newTabBtn">
+        <i class="fas fa-external-link-alt"></i> Open in Browser
       </button>
-      <a href="index.html" class="btn btn-outline">
-        <i class="fas fa-th-list"></i> Channel List
+      <a href="index.html" class="btn btn-gray">
+        <i class="fas fa-th-list"></i> More Channels
       </a>
     </div>
   </div>
 </div>
 
 <script>
-// ===== GET URL PARAMETERS =====
-const urlParams = new URLSearchParams(window.location.search);
-const channelName = urlParams.get('name') || 'Live Stream';
-const channelUrl = urlParams.get('url') || '';
-const channelLogo = urlParams.get('logo') || '';
-const channelGroup = urlParams.get('group') || '';
+// Get URL parameters
+const params = new URLSearchParams(window.location.search);
+const chName = params.get('name') || 'Live Stream';
+const chUrl = params.get('url') || '';
+const chLogo = params.get('logo') || '';
+const chGroup = params.get('group') || '';
 
-// ===== DOM ELEMENTS =====
-const channelNameDisplay = document.getElementById('channelNameDisplay');
-const channelGroupDisplay = document.getElementById('channelGroupDisplay');
-const channelLogoImg = document.getElementById('channelLogo');
+// DOM Elements
+const chNameEl = document.getElementById('chName');
+const chGroupEl = document.getElementById('chGroup');
+const chLogoEl = document.getElementById('chLogo');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const errorOverlay = document.getElementById('errorOverlay');
-const errorMessage = document.getElementById('errorMessage');
-const qualityPanel = document.getElementById('qualityPanel');
-const qualityBtn = document.getElementById('qualityBtn');
-const qualityClose = document.getElementById('qualityClose');
-const newTabBtn = document.getElementById('newTabBtn');
-const newTabBtn2 = document.getElementById('newTabBtn2');
+const errorMsg = document.getElementById('errorMsg');
 const retryBtn = document.getElementById('retryBtn');
+const newTabBtn = document.getElementById('newTabBtn');
 
-// ===== SET CHANNEL INFO =====
-channelNameDisplay.textContent = channelName;
-channelGroupDisplay.textContent = channelGroup;
-if (channelLogo) {
-  channelLogoImg.src = channelLogo;
-}
-newTabBtn.href = channelUrl;
-newTabBtn2.onclick = () => window.open(channelUrl, '_blank');
-retryBtn.onclick = () => initializePlayer();
+// Set channel info
+chNameEl.textContent = chName;
+chGroupEl.textContent = chGroup;
+if (chLogo) chLogoEl.src = chLogo;
+newTabBtn.onclick = () => window.open(chUrl, '_blank');
+retryBtn.onclick = initPlayer;
 
-// ===== JW PLAYER SETUP =====
-let jwPlayerInstance = null;
-
-function initializePlayer() {
-  // Show loading
+// Main initialization
+function initPlayer() {
   loadingOverlay.classList.remove('hidden');
   errorOverlay.classList.add('hidden');
   
-  if (!channelUrl) {
-    showError('No stream URL provided. Please go back and select a channel.');
+  if (!chUrl) {
+    showError('No stream URL found. Please go back and select a channel.');
     return;
   }
   
-  // Destroy existing player if any
-  if (jwPlayerInstance) {
-    jwPlayerInstance.remove();
-    jwPlayerInstance = null;
+  console.log('Starting player with URL:', chUrl);
+  
+  // Clear previous player
+  const container = document.getElementById('playerContainer');
+  container.innerHTML = '';
+  
+  // Check URL type
+  const isHLS = chUrl.includes('.m3u8');
+  const isDASH = chUrl.includes('.mpd');
+  const isMP4 = chUrl.includes('.mp4');
+  
+  // Try JW Player first
+  try {
+    setupJWPlayer(chUrl, isHLS, isDASH, isMP4);
+  } catch(e) {
+    console.error('JW Player setup failed:', e);
+    // Fallback to iframe
+    setupFallbackPlayer(chUrl);
   }
+}
+
+// JW Player Setup
+function setupJWPlayer(url, isHLS, isDASH, isMP4) {
+  const container = document.getElementById('playerContainer');
   
-  // Determine stream type
-  const isHLS = channelUrl.includes('.m3u8');
-  const isDASH = channelUrl.includes('.mpd');
+  // Create video element for JW Player
+  const videoDiv = document.createElement('div');
+  videoDiv.id = 'jwplayerDiv';
+  container.appendChild(videoDiv);
   
-  // JW Player configuration
-  const playerConfig = {
-    file: channelUrl,
+  const player = jwplayer('jwplayerDiv');
+  
+  // Configure based on stream type
+  const config = {
+    file: url,
     width: '100%',
     height: '100%',
     autostart: true,
     mute: false,
-    repeat: false,
+    controls: true,
+    displaytitle: false,
     stretching: 'uniform',
-    aspectratio: '16:9',
     
-    // HLS Configuration
-    hlshtml: true,
+    // HLS specific
+    ...(isHLS && {
+      type: 'hls',
+      hlsjsConfig: {
+        enableWorker: true,
+        lowLatencyMode: true
+      }
+    }),
     
-    // Quality labels
-    qualityLabels: {
-      2160: '4K',
-      1440: '1440p',
-      1080: '1080p HD',
-      720: '720p HD',
-      480: '480p',
-      360: '360p',
-      240: '240p'
-    },
+    // DASH specific
+    ...(isDASH && {
+      type: 'dash'
+    }),
     
-    // Captions
-    captions: {
-      color: '#ffffff',
-      fontSize: 14,
-      backgroundOpacity: 50
-    },
-    
-    // Logo
-    logo: {
-      file: channelLogo || '',
-      link: 'index.html',
-      position: 'top-right',
-      hide: true
-    },
+    // MP4 specific
+    ...(isMP4 && {
+      type: 'mp4'
+    }),
     
     // Skin
     skin: {
@@ -624,234 +388,189 @@ function initializePlayer() {
       background: '#000000'
     },
     
-    // Casting
-    cast: {},
-    
-    // Advertising (optional)
-    advertising: {
-      client: 'vast',
-      skipmessage: 'Skip in {xx}',
-      skiptext: 'Skip',
-      skipoffset: 5
+    // Logo
+    logo: {
+      file: chLogo || '',
+      link: 'index.html',
+      position: 'top-right'
     }
   };
   
-  // Setup JW Player
-  try {
-    jwPlayerInstance = jwplayer('jwplayer').setup(playerConfig);
-    
-    // Event Listeners
-    
-    // Ready event
-    jwPlayerInstance.on('ready', function() {
-      console.log('JW Player is ready');
-      
-      // Get available quality levels
-      const levels = jwPlayerInstance.getQualityLevels();
-      buildQualityMenu(levels);
-    });
-    
-    // Play event
-    jwPlayerInstance.on('play', function() {
-      console.log('Stream started playing');
+  player.setup(config);
+  
+  // Events
+  player.on('ready', function() {
+    console.log('JW Player ready');
+    loadingOverlay.classList.add('hidden');
+  });
+  
+  player.on('play', function() {
+    console.log('Stream playing');
+    loadingOverlay.classList.add('hidden');
+    errorOverlay.classList.add('hidden');
+  });
+  
+  player.on('buffer', function() {
+    loadingOverlay.classList.remove('hidden');
+  });
+  
+  player.on('bufferChange', function(e) {
+    if (e.bufferPercent > 10) {
       loadingOverlay.classList.add('hidden');
-      errorOverlay.classList.add('hidden');
-    });
-    
-    // Buffer event
-    jwPlayerInstance.on('buffer', function() {
-      loadingOverlay.classList.remove('hidden');
-    });
-    
-    // Buffer change event
-    jwPlayerInstance.on('bufferChange', function(e) {
-      if (e.bufferPercent >= 10) {
-        loadingOverlay.classList.add('hidden');
-      }
-    });
-    
-    // Error event
-    jwPlayerInstance.on('error', function(e) {
-      console.error('JW Player Error:', e);
-      let errorMsg = 'An error occurred while loading the stream.';
-      
-      if (e.code) {
-        switch(e.code) {
-          case 102:
-          case 103:
-          case 104:
-            errorMsg = 'Unable to load the video. The stream may be offline or unavailable.';
-            break;
-          case 202:
-          case 203:
-            errorMsg = 'Stream format not supported. Please try opening in a new tab.';
-            break;
-          case 302:
-            errorMsg = 'Network error. Please check your internet connection.';
-            break;
-          default:
-            errorMsg = e.message || 'Unknown playback error. Please try again.';
-        }
-      }
-      
-      showError(errorMsg);
-    });
-    
-    // Setup error event
-    jwPlayerInstance.on('setupError', function(e) {
-      console.error('JW Player Setup Error:', e);
-      showError('Failed to initialize player. Please try again.');
-    });
-    
-    // Quality change event
-    jwPlayerInstance.on('levelsChanged', function(e) {
-      const currentQuality = jwPlayerInstance.getCurrentQuality();
-      updateQualitySelection(currentQuality);
-    });
-    
-    // Fullscreen event
-    jwPlayerInstance.on('fullscreen', function(e) {
-      if (e.fullscreen) {
-        qualityPanel.classList.remove('active');
-      }
-    });
-    
-  } catch(e) {
-    console.error('JW Player initialization error:', e);
-    showError('Could not initialize video player.');
-  }
-}
-
-// ===== QUALITY MENU =====
-function buildQualityMenu(levels) {
-  const qualityList = document.getElementById('qualityList');
-  qualityList.innerHTML = '';
-  
-  // Add Auto option
-  const autoOption = document.createElement('div');
-  autoOption.className = 'quality-option active';
-  autoOption.dataset.index = '-1';
-  autoOption.innerHTML = `
-    <span>Auto (Best Quality)</span>
-    <span class="quality-check"><i class="fas fa-check"></i></span>
-  `;
-  autoOption.addEventListener('click', function() {
-    jwPlayerInstance.setCurrentQuality(-1);
-    updateQualityUI(this);
-    qualityPanel.classList.remove('active');
-  });
-  qualityList.appendChild(autoOption);
-  
-  // Add quality levels
-  if (levels && levels.length > 0) {
-    levels.forEach((level, index) => {
-      const label = level.label || `${level.height || ''}p`;
-      const height = level.height || '';
-      
-      const option = document.createElement('div');
-      option.className = 'quality-option';
-      option.dataset.index = index;
-      option.innerHTML = `
-        <span>${label}</span>
-        <span class="quality-check"><i class="fas fa-check"></i></span>
-      `;
-      option.addEventListener('click', function() {
-        jwPlayerInstance.setCurrentQuality(index);
-        updateQualityUI(this);
-        qualityPanel.classList.remove('active');
-      });
-      qualityList.appendChild(option);
-    });
-  }
-}
-
-function updateQualityUI(selectedElement) {
-  const allOptions = document.querySelectorAll('.quality-option');
-  allOptions.forEach(opt => opt.classList.remove('active'));
-  selectedElement.classList.add('active');
-}
-
-function updateQualitySelection(index) {
-  const allOptions = document.querySelectorAll('.quality-option');
-  allOptions.forEach(opt => {
-    const optIndex = parseInt(opt.dataset.index);
-    opt.classList.toggle('active', optIndex === index);
-  });
-}
-
-// ===== QUALITY PANEL TOGGLE =====
-qualityBtn.addEventListener('click', function(e) {
-  e.stopPropagation();
-  qualityPanel.classList.toggle('active');
-});
-
-qualityClose.addEventListener('click', function() {
-  qualityPanel.classList.remove('active');
-});
-
-// Close panel when clicking outside
-document.addEventListener('click', function(e) {
-  if (!qualityPanel.contains(e.target) && e.target !== qualityBtn) {
-    qualityPanel.classList.remove('active');
-  }
-});
-
-// Close panel on escape key
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    qualityPanel.classList.remove('active');
-  }
-  // 'F' key for fullscreen
-  if (e.key === 'f' || e.key === 'F') {
-    if (jwPlayerInstance) {
-      const isFullscreen = jwPlayerInstance.getFullscreen();
-      jwPlayerInstance.setFullscreen(!isFullscreen);
     }
-  }
-});
+  });
+  
+  player.on('error', function(e) {
+    console.error('JW Player Error:', e);
+    
+    // Try fallback on error
+    player.remove();
+    setupFallbackPlayer(url);
+  });
+  
+  player.on('setupError', function(e) {
+    console.error('JW Setup Error:', e);
+    player.remove();
+    setupFallbackPlayer(url);
+  });
+}
 
-// ===== ERROR HANDLING =====
-function showError(message) {
+// Fallback Player using iframe or video tag
+function setupFallbackPlayer(url) {
+  console.log('Using fallback player for:', url);
+  
+  const container = document.getElementById('playerContainer');
+  container.innerHTML = '';
+  
+  const isHLS = url.includes('.m3u8');
+  
+  if (isHLS) {
+    // Try HLS.js with video tag
+    if (typeof Hls !== 'undefined' && Hls.isSupported()) {
+      setupHLSPLayer(url, container);
+    } else if (videoElement.canPlayType('application/vnd.apple.mpegurl')) {
+      // Native HLS (Safari)
+      setupNativePlayer(url, container);
+    } else {
+      // Iframe fallback
+      setupIframePlayer(url, container);
+    }
+  } else {
+    // Direct video for MP4
+    setupNativePlayer(url, container);
+  }
+}
+
+// HLS.js Player
+function setupHLSPLayer(url, container) {
+  const video = document.createElement('video');
+  video.id = 'videoPlayer';
+  video.controls = true;
+  video.autoplay = true;
+  video.style.width = '100%';
+  video.style.height = '100%';
+  container.appendChild(video);
+  
+  const hls = new Hls({
+    enableWorker: true,
+    lowLatencyMode: true,
+    backBufferLength: 90
+  });
+  
+  hls.loadSource(url);
+  hls.attachMedia(video);
+  
+  hls.on(Hls.Events.MANIFEST_PARSED, function() {
+    video.play().catch(() => {});
+    loadingOverlay.classList.add('hidden');
+  });
+  
+  hls.on(Hls.Events.ERROR, function(event, data) {
+    if (data.fatal) {
+      console.error('HLS Error:', data);
+      switch(data.type) {
+        case Hls.ErrorTypes.NETWORK_ERROR:
+          hls.startLoad();
+          break;
+        case Hls.ErrorTypes.MEDIA_ERROR:
+          hls.recoverMediaError();
+          break;
+        default:
+          hls.destroy();
+          showError('Stream format not supported. Try opening in browser.');
+          break;
+      }
+    }
+  });
+}
+
+// Native Player (for MP4 or Safari HLS)
+function setupNativePlayer(url, container) {
+  const video = document.createElement('video');
+  video.src = url;
+  video.controls = true;
+  video.autoplay = true;
+  video.style.width = '100%';
+  video.style.height = '100%';
+  container.appendChild(video);
+  
+  video.addEventListener('canplay', function() {
+    loadingOverlay.classList.add('hidden');
+    video.play().catch(() => {});
+  });
+  
+  video.addEventListener('error', function() {
+    setupIframePlayer(url, container);
+  });
+}
+
+// Iframe Player (last resort)
+function setupIframePlayer(url, container) {
+  const iframe = document.createElement('iframe');
+  iframe.src = url;
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.border = 'none';
+  iframe.allow = 'autoplay; fullscreen';
+  iframe.allowFullscreen = true;
+  container.appendChild(iframe);
+  
+  iframe.addEventListener('load', function() {
+    loadingOverlay.classList.add('hidden');
+  });
+  
+  iframe.addEventListener('error', function() {
+    showError('Could not load stream. Try opening in browser.');
+  });
+}
+
+// Show error
+function showError(msg) {
   loadingOverlay.classList.add('hidden');
-  errorMessage.textContent = message || 'Stream could not be loaded.';
+  errorMsg.textContent = msg;
   errorOverlay.classList.remove('hidden');
 }
 
-function hideError() {
-  errorOverlay.classList.add('hidden');
-}
-
-// ===== INITIALIZE =====
-if (channelUrl) {
-  initializePlayer();
+// Initialize player on load
+if (chUrl) {
+  initPlayer();
   
-  // Auto-hide loading after 10 seconds if stream doesn't start
-  setTimeout(() => {
+  // Timeout for loading
+  setTimeout(function() {
     if (!loadingOverlay.classList.contains('hidden')) {
       loadingOverlay.classList.add('hidden');
     }
-  }, 10000);
+  }, 15000);
 } else {
-  showError('No stream URL found. Please go back and select a channel.');
+  showError('No stream URL provided.');
 }
 
-// ===== HANDLE PAGE UNLOAD =====
-window.addEventListener('beforeunload', function() {
-  if (jwPlayerInstance) {
-    jwPlayerInstance.remove();
+// Keyboard controls
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    window.location.href = 'index.html';
   }
 });
-
-// ===== SERVICE WORKER FOR OFFLINE =====
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    // Optional: Register service worker for caching
-  });
-}
-
-console.log('JioTV+ Player initialized with JW Player');
-console.log('Channel:', channelName);
-console.log('Stream URL:', channelUrl);
 </script>
 </body>
-</html>
+  </html>
