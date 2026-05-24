@@ -4,14 +4,23 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#000000">
-<title>JioTV+ Player | Live Stream</title>
+<meta property="og:title" content="JioTV+ Live Stream">
+<meta property="og:description" content="Watch Live TV in HD Quality">
+<title>JioTV+ | Live Player</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css">
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,600;14..32,700;14..32,800&display=swap');
 
-*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,sans-serif}
+<!-- JW Player -->
+<script src="https://cdn.jwplayer.com/libraries/IDzF9Zmk.js"></script>
+
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap');
+
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  font-family:'Inter',system-ui,sans-serif;
+}
 
 body{
   background:#000;
@@ -20,35 +29,39 @@ body{
   overflow:hidden;
 }
 
-/* ===== PLAYER HEADER ===== */
-.player-header{
+/* ===== TOP BAR ===== */
+.top-bar{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:12px 16px;
+  padding:10px 16px;
   background:#0a0a0a;
-  border-bottom:1px solid #1a1a1a;
-  position:relative;
-  z-index:10;
+  border-bottom:1px solid #1e1e1e;
+  z-index:100;
+  gap:10px;
+  flex-wrap:wrap;
 }
 
 .back-btn{
-  background:rgba(255,255,255,.1);
+  background:rgba(255,255,255,.08);
   border:none;
   color:#fff;
   padding:8px 16px;
   border-radius:20px;
   cursor:pointer;
-  font-size:.85rem;
+  font-size:.84rem;
+  font-weight:500;
   display:flex;
   align-items:center;
   gap:6px;
   text-decoration:none;
-  transition:background .2s;
+  transition:all .2s;
+  white-space:nowrap;
 }
 
 .back-btn:hover{
-  background:rgba(229,62,62,.5);
+  background:#e53e3e;
+  color:#fff;
 }
 
 .channel-info{
@@ -56,14 +69,13 @@ body{
   align-items:center;
   gap:12px;
   flex:1;
-  margin:0 16px;
   min-width:0;
 }
 
-.channel-logo-small{
-  width:36px;
-  height:36px;
-  border-radius:8px;
+.channel-logo{
+  width:38px;
+  height:38px;
+  border-radius:10px;
   object-fit:contain;
   background:rgba(255,255,255,.05);
   flex-shrink:0;
@@ -73,42 +85,49 @@ body{
   min-width:0;
 }
 
-.channel-name-display{
-  font-size:.9rem;
+.channel-name{
+  font-size:.92rem;
   font-weight:700;
   white-space:nowrap;
   overflow:hidden;
   text-overflow:ellipsis;
 }
 
-.channel-group-display{
+.channel-group{
   font-size:.7rem;
-  opacity:.6;
+  opacity:.55;
+  margin-top:1px;
 }
 
-.live-indicator{
+.live-badge{
   display:flex;
   align-items:center;
   gap:6px;
   background:#ef4444;
-  padding:4px 12px;
+  padding:6px 14px;
   border-radius:20px;
   font-size:.75rem;
   font-weight:700;
   flex-shrink:0;
+  animation:livePulse 2s infinite;
+}
+
+@keyframes livePulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(239,68,68,.4)}
+  50%{box-shadow:0 0 0 8px rgba(239,68,68,0)}
 }
 
 .live-dot{
-  width:7px;
-  height:7px;
+  width:8px;
+  height:8px;
   background:#fff;
   border-radius:50%;
   animation:pulse 1.2s infinite alternate;
 }
 
 @keyframes pulse{
-  0%{opacity:.4;transform:scale(.8)}
-  100%{opacity:1;transform:scale(1.2)}
+  0%{opacity:.4;transform:scale(.7)}
+  100%{opacity:1;transform:scale(1.1)}
 }
 
 .player-actions{
@@ -118,145 +137,160 @@ body{
 }
 
 .action-btn{
-  background:rgba(255,255,255,.1);
+  background:rgba(255,255,255,.08);
   border:none;
   color:#fff;
   padding:8px 14px;
   border-radius:20px;
   cursor:pointer;
   font-size:.8rem;
+  font-weight:500;
   display:flex;
   align-items:center;
-  gap:5px;
-  transition:background .2s;
+  gap:6px;
   text-decoration:none;
+  transition:all .2s;
   white-space:nowrap;
 }
 
 .action-btn:hover{
-  background:rgba(229,62,62,.5);
+  background:#e53e3e;
 }
 
-/* ===== VIDEO CONTAINER ===== */
-.video-container{
+/* ===== PLAYER CONTAINER ===== */
+.player-wrapper{
   position:relative;
   width:100%;
-  height:calc(100vh - 60px);
+  height:calc(100vh - 62px);
   background:#000;
 }
 
-.video-container > div{
+#jwplayer{
   position:absolute;
-  inset:0;
+  top:0;
+  left:0;
   width:100%;
   height:100%;
 }
 
-#shakaVideo{
-  width:100%;
-  height:100%;
-  display:block;
-  object-fit:contain;
-}
-
-/* ===== RESOLUTION PANEL ===== */
-.res-panel{
-  position:absolute;
-  bottom:70px;
-  right:16px;
+/* ===== QUALITY SELECTOR OVERLAY ===== */
+.quality-panel{
+  position:fixed;
+  bottom:80px;
+  right:20px;
   background:#1a1a1a;
   border:1px solid #333;
-  border-radius:12px;
+  border-radius:14px;
   min-width:180px;
-  z-index:50;
+  z-index:999;
   overflow:hidden;
   opacity:0;
-  transform:translateY(8px);
+  transform:translateY(10px);
   pointer-events:none;
-  transition:all .18s;
+  transition:all .2s;
+  box-shadow:0 8px 32px rgba(0,0,0,.6);
 }
 
-.res-panel.open{
+.quality-panel.active{
   opacity:1;
-  transform:none;
+  transform:translateY(0);
   pointer-events:all;
 }
 
-.res-panel-header{
+.quality-header{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:12px 16px 8px;
-  border-bottom:1px solid #222;
+  padding:14px 18px 10px;
+  border-bottom:1px solid #2a2a2a;
   font-weight:700;
   font-size:.9rem;
+  color:#fff;
 }
 
-.res-close-btn{
+.quality-close{
   background:none;
   border:none;
   color:#999;
   cursor:pointer;
   font-size:1rem;
-  padding:4px 8px;
+  padding:4px;
   border-radius:50%;
+  transition:all .15s;
+  width:28px;
+  height:28px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
 }
 
-.res-close-btn:hover{
+.quality-close:hover{
   background:#333;
   color:#fff;
 }
 
-.res-row{
+.quality-list{
+  padding:6px 0;
+}
+
+.quality-option{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  padding:10px 16px;
+  padding:12px 18px;
   cursor:pointer;
   font-size:.85rem;
-  transition:background .12s;
+  font-weight:500;
+  color:#ccc;
+  transition:all .12s;
+  gap:12px;
 }
 
-.res-row:hover{
+.quality-option:hover{
   background:#252525;
+  color:#fff;
 }
 
-.res-row.active{
+.quality-option.active{
   font-weight:700;
+  color:#fff;
+  background:rgba(229,62,62,.15);
 }
 
-.res-check{
+.quality-check{
   opacity:0;
+  color:#e53e3e;
+  font-size:.8rem;
 }
 
-.res-row.active .res-check{
+.quality-option.active .quality-check{
   opacity:1;
 }
 
-/* ===== LOADING & ERROR ===== */
-.p-loading{
+/* ===== LOADING OVERLAY ===== */
+.loading-overlay{
   position:absolute;
   inset:0;
-  background:rgba(0,0,0,.8);
+  background:rgba(0,0,0,.85);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
   gap:16px;
-  z-index:20;
+  z-index:50;
   transition:opacity .3s;
 }
 
-.p-loading.gone{
+.loading-overlay.hidden{
   opacity:0;
   pointer-events:none;
 }
 
-.p-spinner{
-  width:48px;
-  height:48px;
+.spinner{
+  width:50px;
+  height:50px;
   border:4px solid rgba(229,62,62,.2);
-  border-top:4px solid #ef4444;
+  border-top:4px solid #e53e3e;
   border-radius:50%;
   animation:spin .8s linear infinite;
 }
@@ -265,193 +299,249 @@ body{
   to{transform:rotate(360deg)}
 }
 
-.p-error{
+.loading-text{
+  font-size:.9rem;
+  opacity:.8;
+}
+
+/* ===== ERROR OVERLAY ===== */
+.error-overlay{
   position:absolute;
   inset:0;
-  background:rgba(0,0,0,.9);
+  background:rgba(0,0,0,.92);
   display:flex;
   flex-direction:column;
   align-items:center;
   justify-content:center;
-  gap:12px;
-  color:#fff;
-  z-index:25;
+  gap:14px;
+  z-index:60;
   text-align:center;
   padding:24px;
 }
 
-.p-error.gone{
+.error-overlay.hidden{
   display:none;
 }
 
-.p-error i{
-  font-size:2.5rem;
+.error-icon{
+  font-size:3rem;
   color:#ef4444;
 }
 
-.p-error p{
-  font-size:.9rem;
-  opacity:.85;
+.error-title{
+  font-size:1.1rem;
+  font-weight:700;
+}
+
+.error-message{
+  font-size:.85rem;
+  opacity:.7;
   max-width:350px;
   line-height:1.5;
 }
 
-.p-btns{
+.error-buttons{
   display:flex;
   gap:10px;
+  margin-top:8px;
   flex-wrap:wrap;
   justify-content:center;
-  margin-top:8px;
 }
 
-.p-btn{
+.btn{
   border:none;
   padding:10px 22px;
-  border-radius:40px;
+  border-radius:25px;
   color:#fff;
-  font-weight:700;
+  font-weight:600;
   cursor:pointer;
   font-size:.85rem;
-  transition:filter .2s;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition:all .2s;
+  text-decoration:none;
 }
 
-.p-btn:hover{
-  filter:brightness(1.1);
+.btn:hover{
+  transform:scale(1.03);
 }
 
-.p-btn-red{
+.btn-red{
   background:#ef4444;
 }
 
-.p-btn-blue{
+.btn-blue{
   background:#3b82f6;
+}
+
+.btn-outline{
+  background:transparent;
+  border:1px solid #555;
+}
+
+.btn-outline:hover{
+  border-color:#e53e3e;
+  background:rgba(229,62,62,.1);
 }
 
 /* ===== RESPONSIVE ===== */
 @media(max-width:768px){
-  .player-header{
+  .top-bar{
     padding:8px 12px;
-    flex-wrap:wrap;
-    gap:8px;
   }
   
-  .channel-info{
-    order:3;
-    width:100%;
-    margin:0;
+  .player-wrapper{
+    height:calc(100vh - 80px);
   }
   
-  .player-actions{
-    order:2;
-  }
-  
-  .video-container{
-    height:calc(100vh - 100px);
+  .channel-name{
+    font-size:.82rem;
   }
   
   .action-btn span{
     display:none;
   }
   
-  .res-panel{
-    right:8px;
-    bottom:60px;
+  .quality-panel{
+    right:10px;
+    bottom:70px;
+    min-width:160px;
+  }
+}
+
+@media(max-width:480px){
+  .top-bar{
+    gap:6px;
+  }
+  
+  .channel-info{
+    order:3;
+    width:100%;
+  }
+  
+  .player-wrapper{
+    height:calc(100vh - 110px);
   }
 }
 </style>
 </head>
 <body>
 
-<!-- PLAYER HEADER -->
-<div class="player-header">
+<!-- TOP BAR -->
+<div class="top-bar">
   <a href="index.html" class="back-btn">
     <i class="fas fa-arrow-left"></i> Back
   </a>
   
   <div class="channel-info">
-    <img class="channel-logo-small" id="channelLogo" src="" alt="" onerror="this.style.display='none'">
+    <img class="channel-logo" id="channelLogo" src="" alt="" onerror="this.style.display='none'">
     <div class="channel-details">
-      <div class="channel-name-display" id="channelNameDisplay">Loading...</div>
-      <div class="channel-group-display" id="channelGroupDisplay"></div>
+      <div class="channel-name" id="channelNameDisplay">Loading Stream...</div>
+      <div class="channel-group" id="channelGroupDisplay"></div>
     </div>
   </div>
   
   <div class="player-actions">
-    <button class="action-btn" id="resBtn">
-      <i class="fas fa-sliders-h"></i> <span id="resLabel">Auto</span>
+    <button class="action-btn" id="qualityBtn">
+      <i class="fas fa-cog"></i> <span>Quality</span>
     </button>
-    <a class="action-btn" id="openTabBtn" href="#" target="_blank">
+    <a class="action-btn" id="newTabBtn" href="#" target="_blank">
       <i class="fas fa-external-link-alt"></i> <span>New Tab</span>
     </a>
   </div>
   
-  <div class="live-indicator">
+  <div class="live-badge">
     <span class="live-dot"></span> LIVE
   </div>
 </div>
 
-<!-- VIDEO CONTAINER -->
-<div class="video-container" id="videoContainer">
-  <div id="shakaContainer">
-    <video id="shakaVideo" autoplay playsinline preload="auto"></video>
-  </div>
+<!-- PLAYER CONTAINER -->
+<div class="player-wrapper" id="playerWrapper">
+  <div id="jwplayer"></div>
   
-  <!-- Resolution Panel -->
-  <div class="res-panel" id="resPanel">
-    <div class="res-panel-header">
-      <span>Resolution</span>
-      <button class="res-close-btn" id="resCloseBtn"><i class="fas fa-times"></i></button>
+  <!-- Quality Selector -->
+  <div class="quality-panel" id="qualityPanel">
+    <div class="quality-header">
+      <span>Video Quality</span>
+      <button class="quality-close" id="qualityClose">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
-    <div id="resPanelList"></div>
+    <div class="quality-list" id="qualityList">
+      <div class="quality-option active" data-quality="auto">
+        <span>Auto</span>
+        <span class="quality-check"><i class="fas fa-check"></i></span>
+      </div>
+      <div class="quality-option" data-quality="1080p">
+        <span>1080p HD</span>
+        <span class="quality-check"><i class="fas fa-check"></i></span>
+      </div>
+      <div class="quality-option" data-quality="720p">
+        <span>720p HD</span>
+        <span class="quality-check"><i class="fas fa-check"></i></span>
+      </div>
+      <div class="quality-option" data-quality="480p">
+        <span>480p</span>
+        <span class="quality-check"><i class="fas fa-check"></i></span>
+      </div>
+      <div class="quality-option" data-quality="360p">
+        <span>360p</span>
+        <span class="quality-check"><i class="fas fa-check"></i></span>
+      </div>
+    </div>
   </div>
   
-  <!-- Loading -->
-  <div class="p-loading" id="pLoading">
-    <div class="p-spinner"></div>
-    <p>Loading stream...</p>
+  <!-- Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <span class="loading-text">Buffering stream...</span>
   </div>
   
-  <!-- Error -->
-  <div class="p-error gone" id="pError">
-    <i class="fas fa-exclamation-circle"></i>
-    <p id="pErrorMsg">Stream could not be loaded.</p>
-    <div class="p-btns">
-      <button class="p-btn p-btn-red" id="retryBtn">
+  <!-- Error Overlay -->
+  <div class="error-overlay hidden" id="errorOverlay">
+    <div class="error-icon">
+      <i class="fas fa-exclamation-circle"></i>
+    </div>
+    <div class="error-title">Stream Error</div>
+    <div class="error-message" id="errorMessage">
+      Unable to load the stream. Please try again.
+    </div>
+    <div class="error-buttons">
+      <button class="btn btn-red" id="retryBtn">
         <i class="fas fa-redo-alt"></i> Retry
       </button>
-      <button class="p-btn p-btn-blue" id="openTabBtn2">
+      <button class="btn btn-blue" id="newTabBtn2">
         <i class="fas fa-external-link-alt"></i> Open in New Tab
       </button>
+      <a href="index.html" class="btn btn-outline">
+        <i class="fas fa-th-list"></i> Channel List
+      </a>
     </div>
   </div>
 </div>
 
 <script>
-// ===== GET URL PARAMS =====
-const params = new URLSearchParams(window.location.search);
-const channelName = params.get('name') || 'Live Stream';
-const channelUrl = params.get('url') || '';
-const channelLogo = params.get('logo') || '';
-const channelGroup = params.get('group') || '';
+// ===== GET URL PARAMETERS =====
+const urlParams = new URLSearchParams(window.location.search);
+const channelName = urlParams.get('name') || 'Live Stream';
+const channelUrl = urlParams.get('url') || '';
+const channelLogo = urlParams.get('logo') || '';
+const channelGroup = urlParams.get('group') || '';
 
 // ===== DOM ELEMENTS =====
-const $ = id => document.getElementById(id);
-const channelNameDisplay = $('channelNameDisplay');
-const channelGroupDisplay = $('channelGroupDisplay');
-const channelLogoImg = $('channelLogo');
-const openTabBtn = $('openTabBtn');
-const openTabBtn2 = $('openTabBtn2');
-const retryBtn = $('retryBtn');
-const pLoading = $('pLoading');
-const pError = $('pError');
-const pErrorMsg = $('pErrorMsg');
-const resBtn = $('resBtn');
-const resLabel = $('resLabel');
-const resPanel = $('resPanel');
-const resPanelList = $('resPanelList');
-const resCloseBtn = $('resCloseBtn');
-const shakaContainer = $('shakaContainer');
-const shakaVideo = $('shakaVideo');
+const channelNameDisplay = document.getElementById('channelNameDisplay');
+const channelGroupDisplay = document.getElementById('channelGroupDisplay');
+const channelLogoImg = document.getElementById('channelLogo');
+const loadingOverlay = document.getElementById('loadingOverlay');
+const errorOverlay = document.getElementById('errorOverlay');
+const errorMessage = document.getElementById('errorMessage');
+const qualityPanel = document.getElementById('qualityPanel');
+const qualityBtn = document.getElementById('qualityBtn');
+const qualityClose = document.getElementById('qualityClose');
+const newTabBtn = document.getElementById('newTabBtn');
+const newTabBtn2 = document.getElementById('newTabBtn2');
+const retryBtn = document.getElementById('retryBtn');
 
 // ===== SET CHANNEL INFO =====
 channelNameDisplay.textContent = channelName;
@@ -459,268 +549,309 @@ channelGroupDisplay.textContent = channelGroup;
 if (channelLogo) {
   channelLogoImg.src = channelLogo;
 }
-openTabBtn.href = channelUrl;
-openTabBtn2.onclick = () => window.open(channelUrl, '_blank');
-retryBtn.onclick = () => loadStream(channelUrl);
+newTabBtn.href = channelUrl;
+newTabBtn2.onclick = () => window.open(channelUrl, '_blank');
+retryBtn.onclick = () => initializePlayer();
 
-// ===== SHAKA PLAYER =====
-let shakaPlayer = null;
+// ===== JW PLAYER SETUP =====
+let jwPlayerInstance = null;
 
-async function initShaka() {
-  shaka.polyfill.installAll();
-  if (!shaka.Player.isBrowserSupported()) {
-    showError('Browser not supported for Shaka Player');
+function initializePlayer() {
+  // Show loading
+  loadingOverlay.classList.remove('hidden');
+  errorOverlay.classList.add('hidden');
+  
+  if (!channelUrl) {
+    showError('No stream URL provided. Please go back and select a channel.');
     return;
   }
   
-  shakaPlayer = new shaka.Player();
-  await shakaPlayer.attach(shakaVideo);
+  // Destroy existing player if any
+  if (jwPlayerInstance) {
+    jwPlayerInstance.remove();
+    jwPlayerInstance = null;
+  }
   
-  const ui = new shaka.ui.Overlay(shakaPlayer, shakaContainer, shakaVideo);
-  ui.configure({
-    addBigPlayButton: true,
-    controlPanelElements: [
-      'play_pause', 'time_and_duration', 'spacer',
-      'mute', 'volume', 'picture_in_picture', 'fullscreen'
-    ],
-    overflowMenuButtons: [],
-    seekBarColors: {
-      base: 'rgba(255,255,255,.25)',
-      buffered: 'rgba(255,255,255,.45)',
-      played: '#ef4444'
+  // Determine stream type
+  const isHLS = channelUrl.includes('.m3u8');
+  const isDASH = channelUrl.includes('.mpd');
+  
+  // JW Player configuration
+  const playerConfig = {
+    file: channelUrl,
+    width: '100%',
+    height: '100%',
+    autostart: true,
+    mute: false,
+    repeat: false,
+    stretching: 'uniform',
+    aspectratio: '16:9',
+    
+    // HLS Configuration
+    hlshtml: true,
+    
+    // Quality labels
+    qualityLabels: {
+      2160: '4K',
+      1440: '1440p',
+      1080: '1080p HD',
+      720: '720p HD',
+      480: '480p',
+      360: '360p',
+      240: '240p'
     },
-    volumeBarColors: {
-      base: 'rgba(255,255,255,.25)',
-      level: '#ef4444'
+    
+    // Captions
+    captions: {
+      color: '#ffffff',
+      fontSize: 14,
+      backgroundOpacity: 50
+    },
+    
+    // Logo
+    logo: {
+      file: channelLogo || '',
+      link: 'index.html',
+      position: 'top-right',
+      hide: true
+    },
+    
+    // Skin
+    skin: {
+      name: 'glow',
+      active: '#e53e3e',
+      inactive: '#ffffff',
+      background: '#000000'
+    },
+    
+    // Casting
+    cast: {},
+    
+    // Advertising (optional)
+    advertising: {
+      client: 'vast',
+      skipmessage: 'Skip in {xx}',
+      skiptext: 'Skip',
+      skipoffset: 5
     }
-  });
+  };
   
-  shakaPlayer.configure({
-    streaming: {
-      bufferingGoal: 60,
-      rebufferingGoal: 10,
-      bufferBehind: 30,
-      jumpLargeGaps: true,
-      stallEnabled: true,
-      ignoreTextStreamFailures: true,
-      retryParameters: {
-        timeout: 15000,
-        maxAttempts: 8,
-        baseDelay: 500,
-        backoffFactor: 1.5
+  // Setup JW Player
+  try {
+    jwPlayerInstance = jwplayer('jwplayer').setup(playerConfig);
+    
+    // Event Listeners
+    
+    // Ready event
+    jwPlayerInstance.on('ready', function() {
+      console.log('JW Player is ready');
+      
+      // Get available quality levels
+      const levels = jwPlayerInstance.getQualityLevels();
+      buildQualityMenu(levels);
+    });
+    
+    // Play event
+    jwPlayerInstance.on('play', function() {
+      console.log('Stream started playing');
+      loadingOverlay.classList.add('hidden');
+      errorOverlay.classList.add('hidden');
+    });
+    
+    // Buffer event
+    jwPlayerInstance.on('buffer', function() {
+      loadingOverlay.classList.remove('hidden');
+    });
+    
+    // Buffer change event
+    jwPlayerInstance.on('bufferChange', function(e) {
+      if (e.bufferPercent >= 10) {
+        loadingOverlay.classList.add('hidden');
       }
-    },
-    manifest: {
-      retryParameters: { timeout: 15000, maxAttempts: 6 },
-      dash: { ignoreMinBufferTime: true, autoCorrectDrift: true }
-    },
-    abr: { enabled: true, defaultBandwidthEstimate: 5000000 }
-  });
-  
-  shakaPlayer.addEventListener('error', (ev) => {
-    console.error('Shaka error:', ev.detail);
-    showError('Playback error. Please try again.');
-  });
-  
-  shakaPlayer.addEventListener('trackschanged', buildResPanel);
-  shakaPlayer.addEventListener('adaptation', syncResLabel);
-  shakaVideo.addEventListener('canplay', hideLoading);
-  shakaVideo.addEventListener('playing', hideLoading);
-}
-
-// ===== RESOLUTION PANEL =====
-function heightLabel(h) {
-  if (h >= 2160) return '4K';
-  if (h >= 1440) return '1440p';
-  if (h >= 1080) return '1080p';
-  if (h >= 720) return '720p';
-  if (h >= 576) return '576p';
-  if (h >= 480) return '480p';
-  if (h >= 360) return '360p';
-  return h + 'p';
-}
-
-function buildResPanel() {
-  if (!shakaPlayer) return;
-  
-  const heights = [...new Set(
-    shakaPlayer.getVariantTracks()
-      .map(t => t.height)
-      .filter(Boolean)
-  )].sort((a, b) => b - a);
-  
-  if (!heights.length) {
-    resBtn.style.display = 'none';
-    return;
+    });
+    
+    // Error event
+    jwPlayerInstance.on('error', function(e) {
+      console.error('JW Player Error:', e);
+      let errorMsg = 'An error occurred while loading the stream.';
+      
+      if (e.code) {
+        switch(e.code) {
+          case 102:
+          case 103:
+          case 104:
+            errorMsg = 'Unable to load the video. The stream may be offline or unavailable.';
+            break;
+          case 202:
+          case 203:
+            errorMsg = 'Stream format not supported. Please try opening in a new tab.';
+            break;
+          case 302:
+            errorMsg = 'Network error. Please check your internet connection.';
+            break;
+          default:
+            errorMsg = e.message || 'Unknown playback error. Please try again.';
+        }
+      }
+      
+      showError(errorMsg);
+    });
+    
+    // Setup error event
+    jwPlayerInstance.on('setupError', function(e) {
+      console.error('JW Player Setup Error:', e);
+      showError('Failed to initialize player. Please try again.');
+    });
+    
+    // Quality change event
+    jwPlayerInstance.on('levelsChanged', function(e) {
+      const currentQuality = jwPlayerInstance.getCurrentQuality();
+      updateQualitySelection(currentQuality);
+    });
+    
+    // Fullscreen event
+    jwPlayerInstance.on('fullscreen', function(e) {
+      if (e.fullscreen) {
+        qualityPanel.classList.remove('active');
+      }
+    });
+    
+  } catch(e) {
+    console.error('JW Player initialization error:', e);
+    showError('Could not initialize video player.');
   }
+}
+
+// ===== QUALITY MENU =====
+function buildQualityMenu(levels) {
+  const qualityList = document.getElementById('qualityList');
+  qualityList.innerHTML = '';
   
-  resBtn.style.display = 'flex';
-  resPanelList.innerHTML = '';
-  
-  heights.forEach(h => {
-    const row = document.createElement('div');
-    row.className = 'res-row';
-    row.dataset.h = h;
-    row.innerHTML = `<span>${heightLabel(h)}</span><span class="res-check"><i class="fas fa-check"></i></span>`;
-    row.addEventListener('click', () => pickRes(h));
-    resPanelList.appendChild(row);
+  // Add Auto option
+  const autoOption = document.createElement('div');
+  autoOption.className = 'quality-option active';
+  autoOption.dataset.index = '-1';
+  autoOption.innerHTML = `
+    <span>Auto (Best Quality)</span>
+    <span class="quality-check"><i class="fas fa-check"></i></span>
+  `;
+  autoOption.addEventListener('click', function() {
+    jwPlayerInstance.setCurrentQuality(-1);
+    updateQualityUI(this);
+    qualityPanel.classList.remove('active');
   });
+  qualityList.appendChild(autoOption);
   
-  const autoRow = document.createElement('div');
-  autoRow.className = 'res-row active';
-  autoRow.dataset.h = 'auto';
-  autoRow.innerHTML = '<span>Auto</span><span class="res-check"><i class="fas fa-check"></i></span>';
-  autoRow.addEventListener('click', () => pickRes('auto'));
-  resPanelList.appendChild(autoRow);
+  // Add quality levels
+  if (levels && levels.length > 0) {
+    levels.forEach((level, index) => {
+      const label = level.label || `${level.height || ''}p`;
+      const height = level.height || '';
+      
+      const option = document.createElement('div');
+      option.className = 'quality-option';
+      option.dataset.index = index;
+      option.innerHTML = `
+        <span>${label}</span>
+        <span class="quality-check"><i class="fas fa-check"></i></span>
+      `;
+      option.addEventListener('click', function() {
+        jwPlayerInstance.setCurrentQuality(index);
+        updateQualityUI(this);
+        qualityPanel.classList.remove('active');
+      });
+      qualityList.appendChild(option);
+    });
+  }
 }
 
-function pickRes(h) {
-  if (!shakaPlayer) return;
-  
-  if (h === 'auto') {
-    shakaPlayer.configure({ abr: { enabled: true } });
-    resLabel.textContent = 'Auto';
-  } else {
-    shakaPlayer.configure({ abr: { enabled: false } });
-    const best = shakaPlayer.getVariantTracks()
-      .filter(t => t.height === h)
-      .sort((a, b) => b.bandwidth - a.bandwidth)[0];
-    if (best) shakaPlayer.selectVariantTrack(best, true);
-    resLabel.textContent = heightLabel(h);
-  }
-  
-  resPanelList.querySelectorAll('.res-row').forEach(row => {
-    row.classList.toggle('active', row.dataset.h === String(h));
+function updateQualityUI(selectedElement) {
+  const allOptions = document.querySelectorAll('.quality-option');
+  allOptions.forEach(opt => opt.classList.remove('active'));
+  selectedElement.classList.add('active');
+}
+
+function updateQualitySelection(index) {
+  const allOptions = document.querySelectorAll('.quality-option');
+  allOptions.forEach(opt => {
+    const optIndex = parseInt(opt.dataset.index);
+    opt.classList.toggle('active', optIndex === index);
   });
-  
-  resPanel.classList.remove('open');
 }
 
-function syncResLabel() {
-  if (!shakaPlayer) return;
-  if (shakaPlayer.getConfiguration().abr.enabled) {
-    resLabel.textContent = 'Auto';
-    return;
-  }
-  const active = shakaPlayer.getVariantTracks().find(t => t.active);
-  if (active && active.height) resLabel.textContent = heightLabel(active.height);
-}
-
-resBtn.addEventListener('click', (e) => {
+// ===== QUALITY PANEL TOGGLE =====
+qualityBtn.addEventListener('click', function(e) {
   e.stopPropagation();
-  resPanel.classList.toggle('open');
+  qualityPanel.classList.toggle('active');
 });
 
-resCloseBtn.addEventListener('click', () => resPanel.classList.remove('open'));
+qualityClose.addEventListener('click', function() {
+  qualityPanel.classList.remove('active');
+});
 
-document.addEventListener('click', (e) => {
-  if (!resPanel.contains(e.target) && e.target !== resBtn) {
-    resPanel.classList.remove('open');
+// Close panel when clicking outside
+document.addEventListener('click', function(e) {
+  if (!qualityPanel.contains(e.target) && e.target !== qualityBtn) {
+    qualityPanel.classList.remove('active');
   }
 });
 
-// ===== STREAM LOADING =====
-function showLoading() {
-  pLoading.classList.remove('gone');
-  pError.classList.add('gone');
-}
+// Close panel on escape key
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') {
+    qualityPanel.classList.remove('active');
+  }
+  // 'F' key for fullscreen
+  if (e.key === 'f' || e.key === 'F') {
+    if (jwPlayerInstance) {
+      const isFullscreen = jwPlayerInstance.getFullscreen();
+      jwPlayerInstance.setFullscreen(!isFullscreen);
+    }
+  }
+});
 
-function hideLoading() {
-  pLoading.classList.add('gone');
-}
-
-function showError(msg) {
-  hideLoading();
-  pErrorMsg.textContent = msg || 'Stream could not be loaded.';
-  pError.classList.remove('gone');
+// ===== ERROR HANDLING =====
+function showError(message) {
+  loadingOverlay.classList.add('hidden');
+  errorMessage.textContent = message || 'Stream could not be loaded.';
+  errorOverlay.classList.remove('hidden');
 }
 
 function hideError() {
-  pError.classList.add('gone');
+  errorOverlay.classList.add('hidden');
 }
 
-async function loadStream(url) {
-  if (!url) {
-    showError('No stream URL provided');
-    return;
-  }
-  
-  showLoading();
-  hideError();
-  resBtn.style.display = 'none';
-  resLabel.textContent = 'Auto';
-  resPanel.classList.remove('open');
-  
-  if (!shakaPlayer) {
-    await initShaka();
-  }
-  
-  // Try native HLS first (Safari/iOS)
-  if (url.includes('.m3u8') && shakaVideo.canPlayType('application/vnd.apple.mpegurl')) {
-    try {
-      await shakaPlayer.unload();
-      shakaVideo.src = url;
-      await new Promise((resolve, reject) => {
-        const onCanPlay = () => {
-          cleanup();
-          resolve();
-        };
-        const onError = () => {
-          cleanup();
-          reject(new Error('Native HLS failed'));
-        };
-        const cleanup = () => {
-          shakaVideo.removeEventListener('canplay', onCanPlay);
-          shakaVideo.removeEventListener('error', onError);
-        };
-        shakaVideo.addEventListener('canplay', onCanPlay, { once: true });
-        shakaVideo.addEventListener('error', onError, { once: true });
-        setTimeout(() => {
-          cleanup();
-          reject(new Error('Timeout'));
-        }, 10000);
-      });
-      shakaVideo.play().catch(() => {});
-      hideLoading();
-      return;
-    } catch (e) {
-      console.log('Native HLS failed, trying Shaka:', e.message);
-      shakaVideo.removeAttribute('src');
-    }
-  }
-  
-  // Try Shaka Player
-  try {
-    await shakaPlayer.unload();
-    await shakaPlayer.load(url);
-    shakaVideo.play().catch(() => {});
-    buildResPanel();
-  } catch (e) {
-    console.error('Shaka load failed:', e);
-    showError('Could not load stream. Try opening in a new tab.');
-  }
-}
-
-// ===== INIT =====
+// ===== INITIALIZE =====
 if (channelUrl) {
-  initShaka().then(() => loadStream(channelUrl));
+  initializePlayer();
+  
+  // Auto-hide loading after 10 seconds if stream doesn't start
+  setTimeout(() => {
+    if (!loadingOverlay.classList.contains('hidden')) {
+      loadingOverlay.classList.add('hidden');
+    }
+  }, 10000);
 } else {
-  showError('No stream URL provided. Please go back and select a channel.');
+  showError('No stream URL found. Please go back and select a channel.');
 }
 
-// Keyboard shortcuts
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    window.location.href = 'index.html';
-  }
-  if (e.key === 'f' || e.key === 'F') {
-    if (document.fullscreenElement) {
-      document.exitFullscreen();
-    } else {
-      videoContainer.requestFullscreen();
-    }
+// ===== HANDLE PAGE UNLOAD =====
+window.addEventListener('beforeunload', function() {
+  if (jwPlayerInstance) {
+    jwPlayerInstance.remove();
   }
 });
+
+// ===== SERVICE WORKER FOR OFFLINE =====
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    // Optional: Register service worker for caching
+  });
+}
+
+console.log('JioTV+ Player initialized with JW Player');
+console.log('Channel:', channelName);
+console.log('Stream URL:', channelUrl);
 </script>
 </body>
 </html>
