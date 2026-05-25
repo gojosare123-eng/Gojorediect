@@ -5,7 +5,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#0a0c10">
-<title>JioTV+ LIVE | All Channels with Logos</title>
+<title>JioTV+ LIVE | All Channels</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap');
@@ -137,6 +137,40 @@ body{
   color:#666;
 }
 
+/* ===== FILTER BAR ===== */
+.filter-bar{
+  max-width:1400px;
+  margin:.75rem auto 0;
+  padding:0 1.5rem;
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem;
+}
+
+.filter-chip{
+  background:var(--dark-surface);
+  border:1px solid var(--dark-border);
+  color:#a0aec0;
+  padding:6px 16px;
+  border-radius:40px;
+  font-size:.75rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:.2s;
+  white-space:nowrap;
+}
+
+.filter-chip:hover{
+  border-color:var(--primary);
+  color:#fff;
+}
+
+.filter-chip.active{
+  background:var(--primary);
+  border-color:var(--primary);
+  color:#fff;
+}
+
 /* ===== STATS BAR ===== */
 .stats-bar{
   max-width:1400px;
@@ -220,7 +254,6 @@ body{
   overflow:hidden;
 }
 
-/* Logo styling */
 .channel-logo{
   width:90px;
   height:90px;
@@ -242,7 +275,6 @@ body{
   z-index:2;
 }
 
-/* Background pattern */
 .card-media::before{
   content:'';
   position:absolute;
@@ -323,6 +355,7 @@ body{
   display:flex;
   align-items:center;
   gap:8px;
+  flex-wrap:wrap;
 }
 
 .watch-btn{
@@ -382,6 +415,39 @@ body{
   margin-bottom:1rem;
 }
 
+/* ===== SESSION STATUS ===== */
+.session-status{
+  max-width:1400px;
+  margin:.5rem auto 0;
+  padding:0 1.5rem;
+}
+
+.session-bar{
+  background:var(--dark-surface);
+  border:1px solid var(--dark-border);
+  border-radius:12px;
+  padding:.6rem 1rem;
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+  font-size:.75rem;
+}
+
+.session-bar .label{
+  color:#666;
+  font-weight:500;
+}
+
+.session-bar .value{
+  color:#4ade80;
+  font-weight:600;
+}
+
+.session-bar .warn{
+  color:#fbbf24;
+  font-weight:600;
+}
+
 /* ===== FOOTER ===== */
 footer{
   background:var(--dark-surface);
@@ -406,9 +472,8 @@ footer{
 }
 
 @media(max-width:480px){
-  .channels-grid{
-    grid-template-columns:1fr;
-  }
+  .channels-grid{grid-template-columns:1fr}
+  .filter-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
 }
 </style>
 </head>
@@ -422,7 +487,7 @@ footer{
       <div class="logo-text">Jio<span>TV+</span></div>
       <span class="badge">LIVE</span>
     </div>
-    <button class="refresh-btn" onclick="fetchAllData()">
+    <button class="refresh-btn" onclick="fetchAllData(true)">
       <i class="fas fa-sync-alt"></i> Refresh
     </button>
   </div>
@@ -435,6 +500,12 @@ footer{
     <input type="text" class="search-input" id="searchInput" placeholder="Search channels by name, group or language..." oninput="filterChannels()">
   </div>
 </div>
+
+<!-- FILTER CHIPS -->
+<div class="filter-bar" id="filterBar"></div>
+
+<!-- SESSION STATUS -->
+<div class="session-status" id="sessionStatus"></div>
 
 <!-- STATS -->
 <div class="stats-bar">
@@ -472,7 +543,8 @@ const CACHE_KEY = 'jiotv_full_data';
 const CACHE_TIME = 30 * 60 * 1000; // 30 minutes
 
 let allChannels = [];
-let logoMap = {}; // Map channel names to logos
+let allGroups = [];
+let activeFilter = 'all';
 
 // ===== FETCH ALL DATA =====
 async function fetchAllData(forceRefresh = false) {
@@ -484,9 +556,11 @@ async function fetchAllData(forceRefresh = false) {
     const cached = getCache();
     if (cached) {
       allChannels = cached.channels;
-      logoMap = cached.logoMap || {};
+      allGroups = cached.groups || [];
       renderChannels(allChannels);
       updateStats();
+      renderFilterChips();
+      renderSessionStatus(cached);
       return;
     }
   }
@@ -500,147 +574,145 @@ async function fetchAllData(forceRefresh = false) {
     
     // Parse JSON
     let channels = [];
-    let globalCookie = '';
+    let meta = {};
     
     if (jsonResponse.ok) {
       const json = await jsonResponse.json();
-      if (json.success && json.data && json.data.livechannels) {
-        channels = json.data.livechannels;
-        globalCookie = json.data.headers?.cookie || '';
+      if (json.success && json.data) {
+        channels = json.data.livechannels || [];
+        meta = {
+          cookie: json.data.headers?.cookie || '',
+          updatedAt: json.data.updatedAt || '',
+          expiresAt: json.data.expiresAt || 0,
+          timeLeft: json.data.timeLeft || '',
+          domain: json.data.domain || ''
+        };
       }
     }
     
-    // Parse M3U for logos
-    logoMap = {};
+    // Parse M3U for logos, groups, languages, and ClearKey info
+    const m3uData = {};
     if (m3uResponse.ok) {
       const m3uText = await m3uResponse.text();
-      logoMap = parseM3ULogos(m3uText);
+      const parsed = parseM3U(m3uText);
+      Object.assign(m3uData, parsed);
     }
     
-    // Merge logo data into channels
+    // Merge M3U metadata into channels
+    const groupsSet = new Set();
+    
     channels = channels.map(channel => {
-      const logo = findLogo(channel.name, logoMap);
+      const info = m3uData[channel.name] || m3uData[normalizeName(channel.name)] || {};
+      if (info.group) groupsSet.add(info.group);
       return {
         ...channel,
-        logo: logo || '',
-        group: logoMap[channel.name]?.group || '',
-        language: logoMap[channel.name]?.language || ''
+        logo: info.logo || '',
+        group: info.group || '',
+        language: info.language || '',
+        licenseType: info.licenseType || '',
+        licenseKey: info.licenseKey || ''
       };
     });
     
     allChannels = channels;
+    allGroups = ['all', ...Array.from(groupsSet).sort()];
     
     // Save to cache
     saveCache({
       channels: allChannels,
-      logoMap: logoMap,
-      cookie: globalCookie,
+      groups: allGroups,
+      meta: meta,
       timestamp: Date.now()
     });
     
     renderChannels(allChannels);
     updateStats();
+    renderFilterChips();
+    renderSessionStatus({ meta });
     
-    console.log('Loaded ' + allChannels.length + ' channels');
-    console.log('Logos found: ' + Object.keys(logoMap).length);
+    console.log(`[JioTV+] Loaded ${allChannels.length} channels in ${allGroups.length - 1} groups`);
     
   } catch(e) {
-    console.error('Fetch error:', e);
+    console.error('[JioTV+] Fetch error:', e);
     
-    // Try cache fallback
     const cached = getCache(true);
     if (cached) {
       allChannels = cached.channels;
-      logoMap = cached.logoMap || {};
+      allGroups = cached.groups || ['all'];
       renderChannels(allChannels);
       updateStats();
-      grid.insertAdjacentHTML('beforeend', 
-        '<div class="empty-state" style="color:#f59e0b"><i class="fas fa-exclamation-triangle"></i><p>Using cached data</p></div>');
+      renderFilterChips();
+      grid.insertAdjacentHTML('beforeend',
+        '<div class="empty-state" style="color:#f59e0b"><i class="fas fa-exclamation-triangle"></i><p>Using cached data — couldn\'t reach server</p></div>');
     } else {
       grid.innerHTML = '<div class="empty-state"><i class="fas fa-times-circle"></i><p>Failed to load. Check connection.</p><button class="watch-btn" style="width:auto;margin-top:1rem;padding:10px 20px" onclick="fetchAllData(true)">Retry</button></div>';
     }
   }
 }
 
-// ===== PARSE M3U FOR LOGOS =====
-function parseM3ULogos(m3uContent) {
-  const logoData = {};
+// ===== PARSE M3U =====
+function parseM3U(m3uContent) {
+  const data = {};
   const lines = m3uContent.split('\n');
-  let currentInfo = null;
   
   for (let i = 0; i < lines.length; i++) {
     const line = lines[i].trim();
     
     if (line.startsWith('#EXTINF:')) {
-      // Extract all attributes
-      const tvgLogo = line.match(/tvg-logo="([^"]*)"/);
-      const tvgName = line.match(/tvg-name="([^"]*)"/);
-      const groupTitle = line.match(/group-title="([^"]*)"/);
-      const tvgLanguage = line.match(/tvg-language="([^"]*)"/);
+      const tvgLogo = extractAttr(line, 'tvg-logo');
+      const tvgName = extractAttr(line, 'tvg-name');
+      const groupTitle = extractAttr(line, 'group-title');
+      const tvgLanguage = extractAttr(line, 'tvg-language');
       const nameMatch = line.match(/,(.+)$/);
+      const name = nameMatch ? nameMatch[1].trim() : (tvgName || '');
       
-      const name = nameMatch ? nameMatch[1].trim() : (tvgName ? tvgName[1] : '');
-      const logo = tvgLogo ? tvgLogo[1] : '';
-      const group = groupTitle ? groupTitle[1] : '';
-      const language = tvgLanguage ? tvgLanguage[1] : '';
+      // Look ahead at next lines for KODIPROP (license info)
+      let licenseType = '';
+      let licenseKey = '';
+      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        const nextLine = lines[j].trim();
+        if (nextLine.startsWith('#KODIPROP:inputstream.adaptive.license_type')) {
+          licenseType = nextLine.split('=').slice(1).join('=');
+        }
+        if (nextLine.startsWith('#KODIPROP:inputstream.adaptive.license_key')) {
+          licenseKey = nextLine.split('=').slice(1).join('=');
+        }
+      }
       
       if (name) {
-        // Store by exact name
-        logoData[name] = {
-          logo: logo,
-          group: group,
-          language: language
+        data[name] = {
+          logo: tvgLogo || '',
+          group: groupTitle || '',
+          language: tvgLanguage || '',
+          licenseType: licenseType,
+          licenseKey: licenseKey
         };
-        
-        // Also store normalized name for better matching
-        const normalized = normalizeChannelName(name);
-        if (!logoData[normalized]) {
-          logoData[normalized] = { logo, group, language };
+        // Also store normalized
+        const norm = normalizeName(name);
+        if (!data[norm]) {
+          data[norm] = data[name];
         }
       }
     }
   }
   
-  return logoData;
+  return data;
 }
 
-// ===== FIND LOGO FOR CHANNEL =====
-function findLogo(channelName, logoMap) {
-  if (!channelName || !logoMap) return '';
-  
-  // Exact match
-  if (logoMap[channelName]?.logo) {
-    return logoMap[channelName].logo;
-  }
-  
-  // Normalized match
-  const normalized = normalizeChannelName(channelName);
-  if (logoMap[normalized]?.logo) {
-    return logoMap[normalized].logo;
-  }
-  
-  // Partial match (check if any key contains the channel name)
-  for (const key in logoMap) {
-    if (key.toLowerCase().includes(channelName.toLowerCase()) ||
-        channelName.toLowerCase().includes(key.toLowerCase())) {
-      return logoMap[key].logo;
-    }
-  }
-  
-  return '';
+function extractAttr(line, attr) {
+  const match = line.match(new RegExp(attr + '="([^"]*)"'));
+  return match ? match[1] : '';
 }
 
-// ===== NORMALIZE CHANNEL NAME =====
-function normalizeChannelName(name) {
-  return name
-    .toLowerCase()
+function normalizeName(name) {
+  return name.toLowerCase()
     .replace(/hd$/i, '')
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-// ===== CACHE FUNCTIONS =====
+// ===== CACHE =====
 function getCache(ignoreExpiry = false) {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
@@ -648,63 +720,49 @@ function getCache(ignoreExpiry = false) {
     const data = JSON.parse(raw);
     if (!ignoreExpiry && Date.now() - data.timestamp > CACHE_TIME) return null;
     return data;
-  } catch(e) {
-    return null;
-  }
+  } catch(e) { return null; }
 }
 
 function saveCache(data) {
-  try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify(data));
-  } catch(e) {
-    console.warn('Cache save failed');
-  }
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch(e) {}
 }
 
-// ===== RENDER CHANNELS =====
+// ===== RENDER =====
 function renderChannels(channels) {
   const grid = document.getElementById('channelsGrid');
   
   if (!channels || channels.length === 0) {
-    grid.innerHTML = '<div class="empty-state"><i class="fas fa-tv"></i><p>No channels available</p></div>';
+    grid.innerHTML = '<div class="empty-state"><i class="fas fa-tv"></i><p>No channels found</p></div>';
     return;
   }
   
-  grid.innerHTML = channels.map(channel => {
-    const name = escapeHtml(channel.name || 'Unknown');
-    const contentId = channel.contentId || '';
-    const mpd = channel.mpd || '';
-    const cookie = channel.cookie || '';
-    const logo = channel.logo || '';
-    const group = channel.group || '';
-    const language = channel.language || '';
-    const isHD = name.toLowerCase().includes('hd');
+  grid.innerHTML = channels.map(ch => {
+    const name = escHtml(ch.name || 'Unknown');
+    const logo = ch.logo || '';
+    const group = ch.group || '';
+    const lang = ch.language || '';
+    const id = ch.contentId || '';
+    const isHD = /hd/i.test(name);
     
     return `
-      <div class="channel-card" 
-           data-name="${name.toLowerCase()}" 
-           data-id="${contentId}"
-           onclick="openPlayer('${escapeAttr(name)}', '${escapeAttr(mpd)}', '${escapeAttr(contentId)}', '${escapeAttr(cookie)}')">
+      <div class="channel-card" onclick="openPlayer('${escAttr(name)}','${escAttr(ch.mpd)}','${escAttr(id)}','${escAttr(ch.cookie || '')}')">
         <div class="card-media">
-          ${logo ? 
-            `<img class="channel-logo" src="${escapeAttr(logo)}" alt="${name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
-             <i class="fas fa-tv channel-logo-placeholder" style="display:none"></i>` :
-            `<i class="fas fa-tv channel-logo-placeholder"></i>`
+          ${logo
+            ? `<img class="channel-logo" src="${escAttr(logo)}" alt="${name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><i class="fas fa-tv channel-logo-placeholder" style="display:none"></i>`
+            : `<i class="fas fa-tv channel-logo-placeholder"></i>`
           }
-          <div class="live-tag">
-            <i class="fas fa-circle" style="font-size:.35rem"></i> LIVE
-          </div>
+          <div class="live-tag"><i class="fas fa-circle" style="font-size:.35rem"></i> LIVE</div>
           ${isHD ? '<div class="hd-tag">HD</div>' : ''}
-          ${group ? `<div class="quality-tag">${escapeHtml(group)}</div>` : ''}
+          ${group ? `<div class="quality-tag">${escHtml(group)}</div>` : ''}
         </div>
         <div class="card-info">
           <div class="channel-name">${name}</div>
-          ${group ? `<div class="channel-group"><i class="fas fa-folder" style="font-size:.6rem"></i> ${escapeHtml(group)}</div>` : ''}
+          ${group ? `<div class="channel-group"><i class="fas fa-folder" style="font-size:.6rem"></i> ${escHtml(group)}</div>` : ''}
           <div class="channel-meta">
-            <span><i class="fas fa-id-card" style="font-size:.6rem"></i> ${contentId}</span>
-            ${language ? `<span><i class="fas fa-language" style="font-size:.6rem"></i> ${escapeHtml(language)}</span>` : ''}
+            <span><i class="fas fa-hashtag" style="font-size:.6rem"></i> ${id}</span>
+            ${lang ? `<span><i class="fas fa-language" style="font-size:.6rem"></i> ${escHtml(lang)}</span>` : ''}
           </div>
-          <button class="watch-btn" onclick="event.stopPropagation(); openPlayer('${escapeAttr(name)}', '${escapeAttr(mpd)}', '${escapeAttr(contentId)}', '${escapeAttr(cookie)}')">
+          <button class="watch-btn" onclick="event.stopPropagation();openPlayer('${escAttr(name)}','${escAttr(ch.mpd)}','${escAttr(id)}','${escAttr(ch.cookie || '')}')">
             <i class="fas fa-play-circle"></i> WATCH NOW
           </button>
         </div>
@@ -713,69 +771,104 @@ function renderChannels(channels) {
   }).join('');
 }
 
-// ===== FILTER CHANNELS =====
+// ===== FILTERS =====
 function filterChannels() {
   const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
   
   let filtered = allChannels;
   
+  // Apply group filter
+  if (activeFilter !== 'all') {
+    filtered = filtered.filter(ch => (ch.group || '').toLowerCase() === activeFilter.toLowerCase());
+  }
+  
+  // Apply search
   if (searchTerm) {
-    filtered = allChannels.filter(ch => {
-      const name = (ch.name || '').toLowerCase();
-      const group = (ch.group || '').toLowerCase();
-      const language = (ch.language || '').toLowerCase();
-      const id = (ch.contentId || '').toLowerCase();
-      
-      return name.includes(searchTerm) || 
-             group.includes(searchTerm) || 
-             language.includes(searchTerm) ||
-             id.includes(searchTerm);
-    });
+    filtered = filtered.filter(ch =>
+      (ch.name || '').toLowerCase().includes(searchTerm) ||
+      (ch.group || '').toLowerCase().includes(searchTerm) ||
+      (ch.language || '').toLowerCase().includes(searchTerm) ||
+      (ch.contentId || '').includes(searchTerm)
+    );
   }
   
   renderChannels(filtered);
   document.getElementById('channelCount').textContent = filtered.length;
 }
 
-// ===== UPDATE STATS =====
+function setFilter(group) {
+  activeFilter = group;
+  document.querySelectorAll('.filter-chip').forEach(el => {
+    el.classList.toggle('active', el.dataset.group === group);
+  });
+  filterChannels();
+}
+
+function renderFilterChips() {
+  const bar = document.getElementById('filterBar');
+  if (!allGroups.length) { bar.innerHTML = ''; return; }
+  
+  bar.innerHTML = allGroups.map(g => `
+    <span class="filter-chip ${g === 'all' ? 'active' : ''}" data-group="${g}" onclick="setFilter('${escAttr(g)}')">
+      ${g === 'all' ? '<i class="fas fa-th-large"></i> All' : escHtml(g)}
+    </span>
+  `).join('');
+}
+
+// ===== SESSION STATUS =====
+function renderSessionStatus(cacheData) {
+  const el = document.getElementById('sessionStatus');
+  const meta = cacheData?.meta;
+  if (!meta || !meta.cookie) { el.innerHTML = ''; return; }
+  
+  const expires = meta.expiresAt ? new Date(meta.expiresAt * 1000) : null;
+  const now = new Date();
+  const timeLeft = expires ? Math.max(0, Math.floor((expires - now) / 1000 / 60)) : 0;
+  const isExpiring = timeLeft < 30;
+  
+  el.innerHTML = `
+    <div class="session-bar">
+      <i class="fas fa-shield-alt" style="color:${isExpiring ? '#fbbf24' : '#4ade80'}"></i>
+      <span class="label">Session:</span>
+      <span class="${isExpiring ? 'warn' : 'value'}">
+        ${isExpiring ? '⚠ Expiring' : 'Active'}
+      </span>
+      <span style="color:#666">·</span>
+      <span class="label">Expires:</span>
+      <span>${expires ? expires.toLocaleTimeString() : 'N/A'}</span>
+      <span style="color:#666">(${timeLeft}m remaining)</span>
+      <span style="color:#666">·</span>
+      <span style="color:#94a3b8;font-size:.7rem">${meta.updatedAt || ''}</span>
+    </div>
+  `;
+}
+
+// ===== STATS =====
 function updateStats() {
   document.getElementById('channelCount').textContent = allChannels.length;
-  document.getElementById('updateTime').textContent = 
+  document.getElementById('updateTime').textContent =
     'Updated: ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
 }
 
 // ===== OPEN PLAYER =====
 function openPlayer(name, mpdUrl, contentId, cookie) {
-  if (!mpdUrl) {
-    alert('No stream URL available for this channel');
-    return;
-  }
+  if (!mpdUrl) { alert('No stream URL available'); return; }
   
-  const params = new URLSearchParams({
-    name: name,
-    url: mpdUrl,
-    id: contentId,
-    cookie: cookie
-  });
+  localStorage.setItem('jiotv_current_channel', JSON.stringify({ name, mpdUrl, contentId, cookie }));
   
-  try {
-    localStorage.setItem('jiotv_current_channel', JSON.stringify({
-      name, mpdUrl, contentId, cookie
-    }));
-  } catch(e) {}
-  
+  const params = new URLSearchParams({ name, url: mpdUrl, id: contentId, cookie });
   window.location.href = 'player.html?' + params.toString();
 }
 
-// ===== UTILITY FUNCTIONS =====
-function escapeHtml(str) {
+// ===== UTILITIES =====
+function escHtml(str) {
   if (!str) return '';
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
 }
 
-function escapeAttr(str) {
+function escAttr(str) {
   if (!str) return '';
   return str.replace(/&/g,'&amp;').replace(/'/g,'\\x27').replace(/"/g,'&quot;');
 }
@@ -786,8 +879,8 @@ fetchAllData();
 // Auto-refresh
 setInterval(() => fetchAllData(true), CACHE_TIME);
 
-// Keyboard shortcuts
-document.addEventListener('keydown', function(e) {
+// Keyboard shortcut: Ctrl+K to focus search
+document.addEventListener('keydown', e => {
   if (e.ctrlKey && e.key === 'k') {
     e.preventDefault();
     document.getElementById('searchInput').focus();
