@@ -1,343 +1,889 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#000000">
-<title>JioTV+ Player</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a0c10">
+<title>JioTV+ LIVE | All Channels</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;color:#fff;font-family:Arial,sans-serif;height:100vh;display:flex;flex-direction:column}
+@import url('https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap');
 
-.topbar{
-  display:flex;align-items:center;gap:15px;padding:10px 15px;
-  background:#111;border-bottom:1px solid #222;
-}
-.back-btn{
-  color:#fff;text-decoration:none;background:#333;padding:8px 15px;
-  border-radius:20px;font-size:14px;display:flex;align-items:center;gap:5px;
-}
-.back-btn:hover{background:#e53e3e}
-.ch-name{font-size:16px;font-weight:bold;flex:1}
-.live-tag{background:#e53e3e;padding:5px 12px;border-radius:15px;font-size:12px;font-weight:bold}
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter',system-ui,sans-serif}
 
-.player-wrap{flex:1;position:relative;background:#000}
-.player-wrap iframe{width:100%;height:100%;border:none}
-
-.loading{
-  position:absolute;inset:0;background:rgba(0,0,0,.8);display:flex;
-  flex-direction:column;align-items:center;justify-content:center;gap:15px;z-index:10;
+:root{
+  --primary:#e53e3e;
+  --dark-bg:#0a0c10;
+  --dark-surface:#14171c;
+  --dark-card:#1a1e24;
+  --dark-border:#2d3138;
+  --dark-text:#edf2f7;
 }
-.loading.hidden{display:none}
+
+body{
+  background:var(--dark-bg);
+  color:var(--dark-text);
+  min-height:100vh;
+  line-height:1.5;
+}
+
+/* ===== HEADER ===== */
+.glass-header{
+  background:rgba(10,12,16,.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--dark-border);
+  position:sticky;
+  top:0;
+  z-index:100;
+  padding:.75rem 1.5rem;
+}
+
+.header-container{
+  max-width:1400px;
+  margin:0 auto;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:1rem;
+}
+
+.logo-area{
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+}
+
+.logo-icon{
+  background:var(--primary);
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:1.4rem;
+}
+
+.logo-text{
+  font-size:1.5rem;
+  font-weight:800;
+  letter-spacing:-.5px;
+}
+
+.logo-text span{color:var(--primary)}
+
+.badge{
+  background:var(--primary);
+  font-size:.7rem;
+  padding:.2rem .6rem;
+  border-radius:40px;
+  font-weight:600;
+}
+
+.refresh-btn{
+  background:var(--dark-surface);
+  border:1px solid var(--dark-border);
+  color:#fff;
+  padding:8px 16px;
+  border-radius:20px;
+  cursor:pointer;
+  font-size:.85rem;
+  display:flex;
+  align-items:center;
+  gap:6px;
+  transition:.2s;
+}
+
+.refresh-btn:hover{
+  background:var(--primary);
+  border-color:var(--primary);
+}
+
+/* ===== SEARCH ===== */
+.search-container{
+  max-width:1400px;
+  margin:1rem auto;
+  padding:0 1.5rem;
+}
+
+.search-wrapper{
+  position:relative;
+  max-width:500px;
+}
+
+.search-input{
+  width:100%;
+  padding:12px 20px 12px 45px;
+  background:var(--dark-surface);
+  border:2px solid var(--dark-border);
+  border-radius:30px;
+  color:var(--dark-text);
+  font-size:.9rem;
+  outline:none;
+  transition:.3s;
+}
+
+.search-input:focus{
+  border-color:var(--primary);
+}
+
+.search-icon{
+  position:absolute;
+  left:16px;
+  top:50%;
+  transform:translateY(-50%);
+  color:#666;
+}
+
+/* ===== FILTER BAR ===== */
+.filter-bar{
+  max-width:1400px;
+  margin:.75rem auto 0;
+  padding:0 1.5rem;
+  display:flex;
+  flex-wrap:wrap;
+  gap:.5rem;
+}
+
+.filter-chip{
+  background:var(--dark-surface);
+  border:1px solid var(--dark-border);
+  color:#a0aec0;
+  padding:6px 16px;
+  border-radius:40px;
+  font-size:.75rem;
+  font-weight:600;
+  cursor:pointer;
+  transition:.2s;
+  white-space:nowrap;
+}
+
+.filter-chip:hover{
+  border-color:var(--primary);
+  color:#fff;
+}
+
+.filter-chip.active{
+  background:var(--primary);
+  border-color:var(--primary);
+  color:#fff;
+}
+
+/* ===== STATS BAR ===== */
+.stats-bar{
+  max-width:1400px;
+  margin:1rem auto;
+  padding:0 1.5rem;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:1rem;
+}
+
+.channel-count{
+  background:var(--primary);
+  padding:.4rem 1.1rem;
+  border-radius:60px;
+  font-weight:700;
+  font-size:.85rem;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.pulse-dot{
+  width:10px;
+  height:10px;
+  background:#fff;
+  border-radius:50%;
+  animation:pulse 1.2s infinite alternate;
+}
+
+@keyframes pulse{
+  0%{opacity:.4;transform:scale(.8)}
+  100%{opacity:1;transform:scale(1.2)}
+}
+
+.update-time{
+  background:var(--dark-surface);
+  padding:.4rem 1rem;
+  border-radius:60px;
+  font-size:.8rem;
+}
+
+/* ===== CHANNEL GRID ===== */
+.main-content{
+  max-width:1400px;
+  margin:2rem auto;
+  padding:0 1.5rem;
+}
+
+.channels-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(300px,1fr));
+  gap:1rem;
+}
+
+.channel-card{
+  background:var(--dark-card);
+  border-radius:16px;
+  overflow:hidden;
+  border:1px solid var(--dark-border);
+  transition:all .3s;
+  cursor:pointer;
+  display:flex;
+  flex-direction:column;
+}
+
+.channel-card:hover{
+  transform:translateY(-4px);
+  border-color:var(--primary);
+  box-shadow:0 12px 28px -8px rgba(229,62,62,.2);
+}
+
+.card-media{
+  position:relative;
+  height:160px;
+  background:linear-gradient(135deg,#1a1e24,#0f1117);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+}
+
+.channel-logo{
+  width:90px;
+  height:90px;
+  object-fit:contain;
+  border-radius:16px;
+  background:rgba(0,0,0,.3);
+  padding:8px;
+  transition:transform .3s;
+  z-index:2;
+}
+
+.channel-card:hover .channel-logo{
+  transform:scale(1.1);
+}
+
+.channel-logo-placeholder{
+  font-size:3.5rem;
+  opacity:.2;
+  z-index:2;
+}
+
+.card-media::before{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:radial-gradient(circle at center, rgba(229,62,62,.1) 0%, transparent 70%);
+  z-index:1;
+}
+
+.live-tag{
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:#ef4444;
+  padding:4px 12px;
+  border-radius:40px;
+  font-size:.65rem;
+  font-weight:800;
+  display:flex;
+  align-items:center;
+  gap:5px;
+  z-index:3;
+  box-shadow:0 2px 8px rgba(0,0,0,.5);
+}
+
+.quality-tag{
+  position:absolute;
+  bottom:10px;
+  right:10px;
+  background:rgba(0,0,0,.7);
+  backdrop-filter:blur(4px);
+  padding:3px 10px;
+  border-radius:20px;
+  font-size:.65rem;
+  font-weight:600;
+  z-index:3;
+}
+
+.hd-tag{
+  position:absolute;
+  top:10px;
+  right:10px;
+  background:linear-gradient(135deg,#f59e0b,#d97706);
+  padding:3px 8px;
+  border-radius:4px;
+  font-size:.6rem;
+  font-weight:800;
+  z-index:3;
+  letter-spacing:.5px;
+}
+
+.card-info{
+  padding:1rem;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+
+.channel-name{
+  font-size:.95rem;
+  font-weight:700;
+  margin-bottom:4px;
+  line-height:1.3;
+}
+
+.channel-group{
+  font-size:.7rem;
+  color:#a0aec0;
+  margin-bottom:3px;
+  display:flex;
+  align-items:center;
+  gap:4px;
+}
+
+.channel-meta{
+  font-size:.68rem;
+  color:#555;
+  margin-bottom:10px;
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.watch-btn{
+  width:100%;
+  background:linear-gradient(105deg,var(--primary) 0%,#c53030 100%);
+  border:none;
+  padding:10px;
+  border-radius:25px;
+  color:#fff;
+  font-weight:700;
+  font-size:.82rem;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  transition:.2s;
+  margin-top:auto;
+}
+
+.watch-btn:hover{
+  filter:brightness(1.1);
+  transform:scale(.98);
+}
+
+/* ===== LOADING ===== */
+.loading-state{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:5rem;
+  gap:1rem;
+  grid-column:1/-1;
+}
+
 .spinner{
-  width:40px;height:40px;border:3px solid #333;border-top:3px solid #e53e3e;
-  border-radius:50%;animation:spin 1s linear infinite;
+  width:48px;
+  height:48px;
+  border:4px solid rgba(229,62,62,.2);
+  border-top:4px solid var(--primary);
+  border-radius:50%;
+  animation:spin .8s linear infinite;
 }
+
 @keyframes spin{to{transform:rotate(360deg)}}
 
-.error-msg{
-  position:absolute;inset:0;background:rgba(0,0,0,.9);display:flex;
-  flex-direction:column;align-items:center;justify-content:center;gap:10px;z-index:20;
+.empty-state{
+  text-align:center;
+  padding:3rem;
+  opacity:.5;
+  grid-column:1/-1;
 }
-.error-msg.hidden{display:none}
-.error-msg p{color:#ff6b6b;text-align:center;max-width:300px}
-.btn{
-  padding:10px 20px;border:none;border-radius:25px;color:#fff;cursor:pointer;
-  font-size:14px;font-weight:bold;margin:5px;
-}
-.btn-red{background:#e53e3e}
-.btn-blue{background:#3b82f6}
 
-.debug-info{
-  position:absolute;bottom:10px;left:10px;background:rgba(0,0,0,.7);
-  padding:5px 10px;border-radius:10px;font-size:11px;z-index:5;
+.empty-state i{
+  font-size:3rem;
+  display:block;
+  margin-bottom:1rem;
+}
+
+/* ===== SESSION STATUS ===== */
+.session-status{
+  max-width:1400px;
+  margin:.5rem auto 0;
+  padding:0 1.5rem;
+}
+
+.session-bar{
+  background:var(--dark-surface);
+  border:1px solid var(--dark-border);
+  border-radius:12px;
+  padding:.6rem 1rem;
+  display:flex;
+  align-items:center;
+  gap:.75rem;
+  font-size:.75rem;
+}
+
+.session-bar .label{
+  color:#666;
+  font-weight:500;
+}
+
+.session-bar .value{
+  color:#4ade80;
+  font-weight:600;
+}
+
+.session-bar .warn{
+  color:#fbbf24;
+  font-weight:600;
+}
+
+/* ===== FOOTER ===== */
+footer{
+  background:var(--dark-surface);
+  padding:1.5rem;
+  text-align:center;
+  border-top:1px solid var(--dark-border);
+  margin-top:3rem;
+  font-size:.75rem;
+  opacity:.6;
+}
+
+/* ===== RESPONSIVE ===== */
+@media(max-width:768px){
+  .channels-grid{
+    grid-template-columns:repeat(auto-fill,minmax(250px,1fr));
+    gap:.8rem;
+  }
+  .card-media{height:140px}
+  .channel-logo{width:75px;height:75px}
+  .channel-name{font-size:.85rem}
+  .logo-text{font-size:1.2rem}
+}
+
+@media(max-width:480px){
+  .channels-grid{grid-template-columns:1fr}
+  .filter-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}
 }
 </style>
 </head>
 <body>
 
-<div class="topbar">
-  <a href="index.html" class="back-btn">← Back</a>
-  <span class="ch-name" id="channelName">Loading...</span>
-  <span class="live-tag">● LIVE</span>
+<!-- HEADER -->
+<header class="glass-header">
+  <div class="header-container">
+    <div class="logo-area">
+      <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+      <div class="logo-text">Jio<span>TV+</span></div>
+      <span class="badge">LIVE</span>
+    </div>
+    <button class="refresh-btn" onclick="fetchAllData(true)">
+      <i class="fas fa-sync-alt"></i> Refresh
+    </button>
+  </div>
+</header>
+
+<!-- SEARCH -->
+<div class="search-container">
+  <div class="search-wrapper">
+    <i class="fas fa-search search-icon"></i>
+    <input type="text" class="search-input" id="searchInput" placeholder="Search channels by name, group or language..." oninput="filterChannels()">
+  </div>
 </div>
 
-<div class="player-wrap" id="playerWrap">
-  <div class="loading" id="loading">
-    <div class="spinner"></div>
-    <span>Loading stream...</span>
+<!-- FILTER CHIPS -->
+<div class="filter-bar" id="filterBar"></div>
+
+<!-- SESSION STATUS -->
+<div class="session-status" id="sessionStatus"></div>
+
+<!-- STATS -->
+<div class="stats-bar">
+  <div class="channel-count">
+    <span class="pulse-dot"></span>
+    <span id="channelCount">0</span> Channels
   </div>
-  
-  <div class="error-msg hidden" id="errorBox">
-    <p id="errorText">Stream error</p>
-    <div>
-      <button class="btn btn-red" onclick="tryPlay()">Retry</button>
-      <button class="btn btn-blue" onclick="openDirect()">Open Direct</button>
-      <a href="index.html" class="btn" style="background:#444;text-decoration:none">Channels</a>
+  <div class="update-time">
+    <i class="far fa-clock"></i> 
+    <span id="updateTime">Loading...</span>
+  </div>
+</div>
+
+<!-- CHANNEL GRID -->
+<main class="main-content">
+  <div class="channels-grid" id="channelsGrid">
+    <div class="loading-state">
+      <div class="spinner"></div>
+      <p>Loading channels & logos...</p>
     </div>
   </div>
-  
-  <div class="debug-info" id="debugInfo">Ready</div>
-</div>
+</main>
+
+<!-- FOOTER -->
+<footer>
+  <div>JioTV+ Streamer | Channels with logos from M3U playlist</div>
+  <div style="margin-top:5px;font-size:.65rem">Data: jiotvplus.dr-strange.workers.dev | Auto-refresh: 30 min</div>
+</footer>
 
 <script>
-// Get URL parameters
-const urlParams = new URLSearchParams(window.location.search);
-const chName = urlParams.get('name') || 'Live Stream';
-const streamUrl = urlParams.get('url') || '';
-const chId = urlParams.get('id') || '';
-const cookie = urlParams.get('cookie') || '';
+// ===== CONFIGURATION =====
+const JSON_API = 'https://jiotvplus.dr-strange.workers.dev/watch/fetch.json';
+const M3U_API = 'https://jiotvplus.dr-strange.workers.dev/api/jiotvplus.m3u';
+const CACHE_KEY = 'jiotv_full_data';
+const CACHE_TIME = 30 * 60 * 1000; // 30 minutes
 
-// DOM
-document.getElementById('channelName').textContent = chName;
-const playerWrap = document.getElementById('playerWrap');
-const loading = document.getElementById('loading');
-const errorBox = document.getElementById('errorBox');
-const errorText = document.getElementById('errorText');
-const debugInfo = document.getElementById('debugInfo');
+let allChannels = [];
+let allGroups = [];
+let activeFilter = 'all';
 
-function log(msg) {
-  console.log('[Player]', msg);
-  debugInfo.textContent = msg;
+// ===== FETCH ALL DATA =====
+async function fetchAllData(forceRefresh = false) {
+  const grid = document.getElementById('channelsGrid');
+  grid.innerHTML = '<div class="loading-state"><div class="spinner"></div><p>Fetching channels & logos...</p></div>';
+  
+  // Check cache
+  if (!forceRefresh) {
+    const cached = getCache();
+    if (cached) {
+      allChannels = cached.channels;
+      allGroups = cached.groups || [];
+      renderChannels(allChannels);
+      updateStats();
+      renderFilterChips();
+      renderSessionStatus(cached);
+      return;
+    }
+  }
+  
+  try {
+    // Fetch both APIs in parallel
+    const [jsonResponse, m3uResponse] = await Promise.all([
+      fetch(JSON_API),
+      fetch(M3U_API)
+    ]);
+    
+    // Parse JSON
+    let channels = [];
+    let meta = {};
+    
+    if (jsonResponse.ok) {
+      const json = await jsonResponse.json();
+      if (json.success && json.data) {
+        channels = json.data.livechannels || [];
+        meta = {
+          cookie: json.data.headers?.cookie || '',
+          updatedAt: json.data.updatedAt || '',
+          expiresAt: json.data.expiresAt || 0,
+          timeLeft: json.data.timeLeft || '',
+          domain: json.data.domain || ''
+        };
+      }
+    }
+    
+    // Parse M3U for logos, groups, languages, and ClearKey info
+    const m3uData = {};
+    if (m3uResponse.ok) {
+      const m3uText = await m3uResponse.text();
+      const parsed = parseM3U(m3uText);
+      Object.assign(m3uData, parsed);
+    }
+    
+    // Merge M3U metadata into channels
+    const groupsSet = new Set();
+    
+    channels = channels.map(channel => {
+      const info = m3uData[channel.name] || m3uData[normalizeName(channel.name)] || {};
+      if (info.group) groupsSet.add(info.group);
+      return {
+        ...channel,
+        logo: info.logo || '',
+        group: info.group || '',
+        language: info.language || '',
+        licenseType: info.licenseType || '',
+        licenseKey: info.licenseKey || ''
+      };
+    });
+    
+    allChannels = channels;
+    allGroups = ['all', ...Array.from(groupsSet).sort()];
+    
+    // Save to cache
+    saveCache({
+      channels: allChannels,
+      groups: allGroups,
+      meta: meta,
+      timestamp: Date.now()
+    });
+    
+    renderChannels(allChannels);
+    updateStats();
+    renderFilterChips();
+    renderSessionStatus({ meta });
+    
+    console.log(`[JioTV+] Loaded ${allChannels.length} channels in ${allGroups.length - 1} groups`);
+    
+  } catch(e) {
+    console.error('[JioTV+] Fetch error:', e);
+    
+    const cached = getCache(true);
+    if (cached) {
+      allChannels = cached.channels;
+      allGroups = cached.groups || ['all'];
+      renderChannels(allChannels);
+      updateStats();
+      renderFilterChips();
+      grid.insertAdjacentHTML('beforeend',
+        '<div class="empty-state" style="color:#f59e0b"><i class="fas fa-exclamation-triangle"></i><p>Using cached data — couldn\'t reach server</p></div>');
+    } else {
+      grid.innerHTML = '<div class="empty-state"><i class="fas fa-times-circle"></i><p>Failed to load. Check connection.</p><button class="watch-btn" style="width:auto;margin-top:1rem;padding:10px 20px" onclick="fetchAllData(true)">Retry</button></div>';
+    }
+  }
 }
 
-function showError(msg) {
-  loading.classList.add('hidden');
-  errorText.textContent = msg;
-  errorBox.classList.remove('hidden');
-  log('ERROR: ' + msg);
+// ===== PARSE M3U =====
+function parseM3U(m3uContent) {
+  const data = {};
+  const lines = m3uContent.split('\n');
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    if (line.startsWith('#EXTINF:')) {
+      const tvgLogo = extractAttr(line, 'tvg-logo');
+      const tvgName = extractAttr(line, 'tvg-name');
+      const groupTitle = extractAttr(line, 'group-title');
+      const tvgLanguage = extractAttr(line, 'tvg-language');
+      const nameMatch = line.match(/,(.+)$/);
+      const name = nameMatch ? nameMatch[1].trim() : (tvgName || '');
+      
+      // Look ahead at next lines for KODIPROP (license info)
+      let licenseType = '';
+      let licenseKey = '';
+      for (let j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+        const nextLine = lines[j].trim();
+        if (nextLine.startsWith('#KODIPROP:inputstream.adaptive.license_type')) {
+          licenseType = nextLine.split('=').slice(1).join('=');
+        }
+        if (nextLine.startsWith('#KODIPROP:inputstream.adaptive.license_key')) {
+          licenseKey = nextLine.split('=').slice(1).join('=');
+        }
+      }
+      
+      if (name) {
+        data[name] = {
+          logo: tvgLogo || '',
+          group: groupTitle || '',
+          language: tvgLanguage || '',
+          licenseType: licenseType,
+          licenseKey: licenseKey
+        };
+        // Also store normalized
+        const norm = normalizeName(name);
+        if (!data[norm]) {
+          data[norm] = data[name];
+        }
+      }
+    }
+  }
+  
+  return data;
 }
 
-function openDirect() {
-  if (streamUrl) window.open(streamUrl, '_blank');
+function extractAttr(line, attr) {
+  const match = line.match(new RegExp(attr + '="([^"]*)"'));
+  return match ? match[1] : '';
 }
 
-// Main play function
-function tryPlay() {
-  if (!streamUrl) {
-    showError('No stream URL');
+function normalizeName(name) {
+  return name.toLowerCase()
+    .replace(/hd$/i, '')
+    .replace(/[^a-z0-9\s]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+// ===== CACHE =====
+function getCache(ignoreExpiry = false) {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (!ignoreExpiry && Date.now() - data.timestamp > CACHE_TIME) return null;
+    return data;
+  } catch(e) { return null; }
+}
+
+function saveCache(data) {
+  try { localStorage.setItem(CACHE_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+// ===== RENDER =====
+function renderChannels(channels) {
+  const grid = document.getElementById('channelsGrid');
+  
+  if (!channels || channels.length === 0) {
+    grid.innerHTML = '<div class="empty-state"><i class="fas fa-tv"></i><p>No channels found</p></div>';
     return;
   }
   
-  loading.classList.remove('hidden');
-  errorBox.classList.add('hidden');
-  log('Starting...');
-  
-  console.log('Channel:', chName);
-  console.log('URL:', streamUrl);
-  console.log('Cookie:', cookie ? 'Present' : 'None');
-  
-  // Clear previous
-  playerWrap.querySelectorAll('iframe,video').forEach(el => el.remove());
-  
-  // Try method 1: Direct iframe with cookie via proxy approach
-  tryMethod1();
-}
-
-// Method 1: Create HTML page that sets cookie then loads stream
-function tryMethod1() {
-  log('Method 1: Cookie injection...');
-  
-  const iframe = document.createElement('iframe');
-  iframe.allow = 'autoplay; fullscreen';
-  iframe.allowFullscreen = true;
-  
-  // Create a blob with HTML that sets cookie before loading
-  const proxyHtml = `
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <script src="https://cdn.dashjs.org/latest/dash.all.min.js"><\/script>
-      <style>
-        *{margin:0;padding:0;background:#000}
-        video{width:100vw;height:100vh;object-fit:contain}
-      <\/style>
-    <\/head>
-    <body>
-      <video id="v" autoplay playsinline controls><\/video>
-      <script>
-        // Set cookie
-        document.cookie = '${cookie.replace(/'/g, "\\'")};path=/;SameSite=None;Secure';
-        
-        // Initialize DASH player
-        const player = dashjs.MediaPlayer().create();
-        
-        player.extend('RequestModifier', function() {
-          return {
-            modifyRequestHeader: function(xhr) {
-              xhr.setRequestHeader('Cookie', '${cookie.replace(/'/g, "\\'")}');
-              return xhr;
-            }
-          };
-        });
-        
-        player.initialize(document.getElementById('v'), '${streamUrl}', true);
-        
-        player.on('playbackPlaying', function() {
-          parent.postMessage('playing', '*');
-        });
-        
-        player.on('error', function() {
-          parent.postMessage('error', '*');
-        });
-      <\/script>
-    <\/body>
-    </html>
-  `;
-  
-  const blob = new Blob([proxyHtml], {type: 'text/html'});
-  iframe.src = URL.createObjectURL(blob);
-  
-  iframe.onload = function() {
-    log('Player loaded');
-    // Give it time to start
-    setTimeout(function() {
-      loading.classList.add('hidden');
-    }, 5000);
-  };
-  
-  playerWrap.appendChild(iframe);
-  
-  // Listen for messages from iframe
-  window.addEventListener('message', function(e) {
-    if (e.data === 'playing') {
-      loading.classList.add('hidden');
-      log('Playing');
-    } else if (e.data === 'error') {
-      // Try next method
-      tryMethod2();
-    }
-  });
-  
-  // Timeout
-  setTimeout(function() {
-    if (!loading.classList.contains('hidden')) {
-      log('Method 1 timeout, trying method 2...');
-      tryMethod2();
-    }
-  }, 15000);
-}
-
-// Method 2: Direct video with DASH.js in main page
-function tryMethod2() {
-  log('Method 2: Direct DASH.js...');
-  
-  // Clear
-  playerWrap.querySelectorAll('iframe').forEach(el => el.remove());
-  
-  const video = document.createElement('video');
-  video.autoplay = true;
-  video.playsInline = true;
-  video.controls = true;
-  video.style.width = '100%';
-  video.style.height = '100%';
-  video.style.objectFit = 'contain';
-  playerWrap.appendChild(video);
-  
-  // Set cookie
-  if (cookie) {
-    document.cookie = cookie.split(';')[0] + ';path=/;SameSite=None;Secure';
-  }
-  
-  // Check if dash.js is loaded
-  if (typeof dashjs === 'undefined') {
-    // Load dash.js dynamically
-    const script = document.createElement('script');
-    script.src = 'https://cdn.dashjs.org/latest/dash.all.min.js';
-    script.onload = function() {
-      initDashPlayer(video);
-    };
-    script.onerror = function() {
-      tryMethod3();
-    };
-    document.head.appendChild(script);
-  } else {
-    initDashPlayer(video);
-  }
-}
-
-function initDashPlayer(video) {
-  try {
-    const player = dashjs.MediaPlayer().create();
+  grid.innerHTML = channels.map(ch => {
+    const name = escHtml(ch.name || 'Unknown');
+    const logo = ch.logo || '';
+    const group = ch.group || '';
+    const lang = ch.language || '';
+    const id = ch.contentId || '';
+    const isHD = /hd/i.test(name);
     
-    if (cookie) {
-      player.extend('RequestModifier', function() {
-        return {
-          modifyRequestHeader: function(xhr) {
-            xhr.setRequestHeader('Cookie', cookie);
-            return xhr;
+    return `
+      <div class="channel-card" onclick="openPlayer('${escAttr(name)}','${escAttr(ch.mpd)}','${escAttr(id)}','${escAttr(ch.cookie || '')}')">
+        <div class="card-media">
+          ${logo
+            ? `<img class="channel-logo" src="${escAttr(logo)}" alt="${name}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='block'"><i class="fas fa-tv channel-logo-placeholder" style="display:none"></i>`
+            : `<i class="fas fa-tv channel-logo-placeholder"></i>`
           }
-        };
-      });
-    }
-    
-    player.initialize(video, streamUrl, true);
-    
-    player.on('playbackPlaying', function() {
-      loading.classList.add('hidden');
-      log('▶ Playing via DASH.js');
-    });
-    
-    player.on('error', function(e) {
-      console.error('DASH error:', e);
-      tryMethod3();
-    });
-    
-    video.play().catch(function() {
-      log('Click to start');
-      loading.classList.add('hidden');
-    });
-    
-  } catch(e) {
-    console.error('DASH init error:', e);
-    tryMethod3();
+          <div class="live-tag"><i class="fas fa-circle" style="font-size:.35rem"></i> LIVE</div>
+          ${isHD ? '<div class="hd-tag">HD</div>' : ''}
+          ${group ? `<div class="quality-tag">${escHtml(group)}</div>` : ''}
+        </div>
+        <div class="card-info">
+          <div class="channel-name">${name}</div>
+          ${group ? `<div class="channel-group"><i class="fas fa-folder" style="font-size:.6rem"></i> ${escHtml(group)}</div>` : ''}
+          <div class="channel-meta">
+            <span><i class="fas fa-hashtag" style="font-size:.6rem"></i> ${id}</span>
+            ${lang ? `<span><i class="fas fa-language" style="font-size:.6rem"></i> ${escHtml(lang)}</span>` : ''}
+          </div>
+          <button class="watch-btn" onclick="event.stopPropagation();openPlayer('${escAttr(name)}','${escAttr(ch.mpd)}','${escAttr(id)}','${escAttr(ch.cookie || '')}')">
+            <i class="fas fa-play-circle"></i> WATCH NOW
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// ===== FILTERS =====
+function filterChannels() {
+  const searchTerm = document.getElementById('searchInput').value.toLowerCase().trim();
+  
+  let filtered = allChannels;
+  
+  // Apply group filter
+  if (activeFilter !== 'all') {
+    filtered = filtered.filter(ch => (ch.group || '').toLowerCase() === activeFilter.toLowerCase());
   }
   
-  // Timeout
-  setTimeout(function() {
-    if (!loading.classList.contains('hidden')) {
-      tryMethod3();
-    }
-  }, 12000);
+  // Apply search
+  if (searchTerm) {
+    filtered = filtered.filter(ch =>
+      (ch.name || '').toLowerCase().includes(searchTerm) ||
+      (ch.group || '').toLowerCase().includes(searchTerm) ||
+      (ch.language || '').toLowerCase().includes(searchTerm) ||
+      (ch.contentId || '').includes(searchTerm)
+    );
+  }
+  
+  renderChannels(filtered);
+  document.getElementById('channelCount').textContent = filtered.length;
 }
 
-// Method 3: Simple iframe
-function tryMethod3() {
-  log('Method 3: Simple iframe...');
-  
-  playerWrap.querySelectorAll('iframe,video').forEach(el => el.remove());
-  
-  const iframe = document.createElement('iframe');
-  iframe.src = streamUrl;
-  iframe.allow = 'autoplay; fullscreen';
-  iframe.allowFullscreen = true;
-  
-  iframe.onload = function() {
-    loading.classList.add('hidden');
-    log('Iframe loaded');
-  };
-  
-  iframe.onerror = function() {
-    showError('All methods failed. Try opening directly.');
-  };
-  
-  playerWrap.appendChild(iframe);
-  
-  setTimeout(function() {
-    loading.classList.add('hidden');
-  }, 8000);
+function setFilter(group) {
+  activeFilter = group;
+  document.querySelectorAll('.filter-chip').forEach(el => {
+    el.classList.toggle('active', el.dataset.group === group);
+  });
+  filterChannels();
 }
 
-// Start
-if (streamUrl) {
-  tryPlay();
-} else {
-  showError('No stream URL. Go back and select a channel.');
+function renderFilterChips() {
+  const bar = document.getElementById('filterBar');
+  if (!allGroups.length) { bar.innerHTML = ''; return; }
+  
+  bar.innerHTML = allGroups.map(g => `
+    <span class="filter-chip ${g === 'all' ? 'active' : ''}" data-group="${g}" onclick="setFilter('${escAttr(g)}')">
+      ${g === 'all' ? '<i class="fas fa-th-large"></i> All' : escHtml(g)}
+    </span>
+  `).join('');
 }
 
-// Keyboard
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') window.location.href = 'index.html';
+// ===== SESSION STATUS =====
+function renderSessionStatus(cacheData) {
+  const el = document.getElementById('sessionStatus');
+  const meta = cacheData?.meta;
+  if (!meta || !meta.cookie) { el.innerHTML = ''; return; }
+  
+  const expires = meta.expiresAt ? new Date(meta.expiresAt * 1000) : null;
+  const now = new Date();
+  const timeLeft = expires ? Math.max(0, Math.floor((expires - now) / 1000 / 60)) : 0;
+  const isExpiring = timeLeft < 30;
+  
+  el.innerHTML = `
+    <div class="session-bar">
+      <i class="fas fa-shield-alt" style="color:${isExpiring ? '#fbbf24' : '#4ade80'}"></i>
+      <span class="label">Session:</span>
+      <span class="${isExpiring ? 'warn' : 'value'}">
+        ${isExpiring ? '⚠ Expiring' : 'Active'}
+      </span>
+      <span style="color:#666">·</span>
+      <span class="label">Expires:</span>
+      <span>${expires ? expires.toLocaleTimeString() : 'N/A'}</span>
+      <span style="color:#666">(${timeLeft}m remaining)</span>
+      <span style="color:#666">·</span>
+      <span style="color:#94a3b8;font-size:.7rem">${meta.updatedAt || ''}</span>
+    </div>
+  `;
+}
+
+// ===== STATS =====
+function updateStats() {
+  document.getElementById('channelCount').textContent = allChannels.length;
+  document.getElementById('updateTime').textContent =
+    'Updated: ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+}
+
+// ===== OPEN PLAYER =====
+function openPlayer(name, mpdUrl, contentId, cookie) {
+  if (!mpdUrl) { alert('No stream URL available'); return; }
+  
+  localStorage.setItem('jiotv_current_channel', JSON.stringify({ name, mpdUrl, contentId, cookie }));
+  
+  const params = new URLSearchParams({ name, url: mpdUrl, id: contentId, cookie });
+  window.location.href = 'player.html?' + params.toString();
+}
+
+// ===== UTILITIES =====
+function escHtml(str) {
+  if (!str) return '';
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function escAttr(str) {
+  if (!str) return '';
+  return str.replace(/&/g,'&amp;').replace(/'/g,'\\x27').replace(/"/g,'&quot;');
+}
+
+// ===== INIT =====
+fetchAllData();
+
+// Auto-refresh
+setInterval(() => fetchAllData(true), CACHE_TIME);
+
+// Keyboard shortcut: Ctrl+K to focus search
+document.addEventListener('keydown', e => {
+  if (e.ctrlKey && e.key === 'k') {
+    e.preventDefault();
+    document.getElementById('searchInput').focus();
+  }
 });
 </script>
 </body>
