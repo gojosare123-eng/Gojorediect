@@ -3,7 +3,7 @@
  <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>..Demøns Player</title>
+  <title>🦅 SATURUGOJO Player</title>
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&amp;display=swap" rel="stylesheet">
   <style>
@@ -12,7 +12,7 @@
             --bg-secondary: #1e1e1e;
             --text-primary: #e0e0e0;
             --text-secondary: #b0b0b0;
-            --accent: #FF5722;
+            --accent: #1a8cff;
             --card-shadow: 0 8px 16px rgba(0, 0, 0, 0.4);
         }
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -93,6 +93,7 @@
             object-fit: contain;
             border-radius: 8px;
             border: 1px solid #333;
+            background: #000;
         }
         .channels-info .info-text { flex: 1; }
         .channels-info h2 {
@@ -100,7 +101,7 @@
             font-weight: 600;
             color: var(--text-primary);
             margin-bottom: 8px;
-            background: linear-gradient(90deg, #FF9800, #FF5722);
+            background: linear-gradient(90deg, #3aa0ff, #1a8cff);
             -webkit-background-clip: text;
             background-clip: text;
             color: transparent;
@@ -144,7 +145,7 @@
         .fit-button:hover { background-color: #444; transform: translateY(-1px); }
         .fit-button.active {
             background-color: var(--accent);
-            box-shadow: 0 0 10px rgba(255, 87, 34, 0.5);
+            box-shadow: 0 0 10px rgba(26, 140, 255, 0.5);
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -194,10 +195,10 @@
         (function(){
             const CORS_PROXY_URL = 'https://demonji.onrender.com/cors-proxy.php/';
             const urlParams = new URLSearchParams(window.location.search);
-            const streamParam = urlParams.get('s') || ''; 
+            const streamParam = urlParams.get('s') || '';
             const channelNameParam = urlParams.get('name') || 'Unknown Channel';
             const channelIconParam = urlParams.get('icon') || '';
-            const backUrlParam = urlParams.get('back') || 'MaC.html';
+            const backUrlParam = urlParams.get('back') || 'index.html';
             const player = document.getElementById('player');
             const channelName = document.getElementById('channelName');
             const channelIcon = document.getElementById('channelIcon');
@@ -211,6 +212,7 @@
             const MAX_RECONNECT_ATTEMPTS = 10;
             const RECONNECT_DELAY = 3000;
             let stallDetector = null;
+            let logoFallbackDone = false;
 
             backButton.addEventListener('click', navigateBack);
             fitButtons.forEach(button => {
@@ -221,21 +223,94 @@
                 });
             });
 
+            // ─── SAFE DECODE (crash-proof) ───
+            function safeDecode(v) {
+                if (!v) return '';
+                try { return decodeURIComponent(v); }
+                catch (e) { return v; }
+            }
+
             function navigateBack() {
                 try {
-                    window.location.assign(decodeURIComponent(backUrlParam));
+                    window.location.assign(safeDecode(backUrlParam) || 'index.html');
                 } catch (err) {
-                    window.location.href = 'MaC.html';
+                    window.location.href = 'index.html';
                 }
             }
 
+            // ─── TEST an image URL (with timeout, so hanging servers skip fast) ───
+            function testImage(url, timeoutMs) {
+                return new Promise(resolve => {
+                    if (!url) return resolve(null);
+                    const img = new Image();
+                    const timer = setTimeout(() => { img.src = ''; resolve(null); }, timeoutMs || 8000);
+                    img.onload = () => { clearTimeout(timer); resolve(url); };
+                    img.onerror = () => { clearTimeout(timer); resolve(null); };
+                    img.src = url;
+                });
+            }
+
+            // ─── GENERATED FALLBACK: sky-blue letter avatar ───
+            function generateFallbackLogo(name) {
+                if (logoFallbackDone) return;
+                logoFallbackDone = true;
+                const letter = (name.trim()[0] || 'TV').toUpperCase();
+                const svg =
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="200" height="112">' +
+                    '<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">' +
+                    '<stop offset="0%" stop-color="#1a8cff"/><stop offset="100%" stop-color="#005bb5"/>' +
+                    '</linearGradient></defs>' +
+                    '<rect width="200" height="112" rx="12" fill="url(#g)"/>' +
+                    '<text x="100" y="74" font-family="Inter,Arial,sans-serif" font-size="56" font-weight="700" fill="#ffffff" text-anchor="middle">' + letter + '</text>' +
+                    '</svg>';
+                channelIcon.src = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+                channelIcon.alt = name + ' Logo (fallback)';
+            }
+
+            // ─── MAIN ICON LOADER with fallback chain ───
             function setChannelInfo() {
-                channelName.textContent = decodeURIComponent(channelNameParam);
-                const decodedIcon = decodeURIComponent(channelIconParam);
-                if (decodedIcon) {
-                    channelIcon.src = decodedIcon;
-                    channelIcon.alt = decodeURIComponent(channelNameParam) + ' Logo';
-                }
+                const name = safeDecode(channelNameParam) || 'Unknown Channel';
+                channelName.textContent = name;
+
+                let icon = safeDecode(channelIconParam).trim();
+                if (!icon) { generateFallbackLogo(name); return; }
+
+                // Final safety net on the DOM element itself
+                channelIcon.onerror = () => generateFallbackLogo(name);
+
+                (async () => {
+                    const candidates = [];
+
+                    // 1. Direct URL
+                    candidates.push(icon);
+
+                    // 2. HTTPS upgrade (fixes mixed-content block)
+                    if (icon.startsWith('http://')) {
+                        candidates.push('https://' + icon.slice(7));
+                    }
+
+                    // 3. Through CORS proxy (bypasses hotlink/referer protection)
+                    if (icon.startsWith('http')) {
+                        candidates.push(CORS_PROXY_URL + icon);
+                        if (icon.startsWith('http://')) {
+                            candidates.push(CORS_PROXY_URL + 'https://' + icon.slice(7));
+                        }
+                    }
+                    // data: URIs load directly — no extra candidates needed
+
+                    for (const url of candidates) {
+                        const ok = await testImage(url);
+                        if (ok) {
+                            // cache-bust so a previously-cached broken logo doesn't stick
+                            const busted = url.startsWith('data:') ? url
+                                : url + (url.includes('?') ? '&' : '?') + '_v=' + Date.now();
+                            channelIcon.src = busted;
+                            channelIcon.alt = name + ' Logo';
+                            return;
+                        }
+                    }
+                    generateFallbackLogo(name);
+                })();
             }
 
             function showStatus(message, isError = false) {
@@ -244,7 +319,7 @@
                 statusMessage.style.color = isError ? '#ef4444' : 'var(--text-primary)';
                 statusMessage.style.background = isError ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-secondary)';
             }
-            
+
             function hideStatus() {
                 statusMessage.style.display = 'none';
             }
@@ -258,31 +333,30 @@
                     showStatus('Error: No stream URL provided.', true);
                     return;
                 }
-                
+
                 if (hls) hls.destroy();
                 clearTimeout(stallDetector);
                 player.pause();
-                showStatus(`Loading channel...`);
+                showStatus('Loading channel...');
 
                 if (Hls.isSupported()) {
-                    // --- UPDATED: Large Buffer Configuration ---
                     hls = new Hls({
-                        maxBufferLength: 300,         // Target buffer of 300s (5 minutes)
-                        maxMaxBufferLength: 600,      // Hard cap buffer of 600s (10 minutes)
-                        maxBufferSize: 500 * 1024 * 1024, // 500MB memory buffer
+                        maxBufferLength: 300,
+                        maxMaxBufferLength: 600,
+                        maxBufferSize: 500 * 1024 * 1024,
                         fragLoadingMaxRetry: 8,
                         lowLatencyMode: true,
                         enableWorker: true,
                         xhrSetup: (xhr, url) => {
                             xhr.open('GET', CORS_PROXY_URL + url, true);
                             xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
-                            xhr.setRequestHeader('Referer', 'http://demonji.onrender.com/');
+                            xhr.setRequestHeader('Referer', 'https://demonji.onrender.com/');
                         }
                     });
-                    
+
                     hls.loadSource(CORS_PROXY_URL + decodedStreamUrl);
                     hls.attachMedia(player);
-                    
+
                     hls.on(Hls.Events.MANIFEST_PARSED, () => {
                         hideStatus();
                         reconnectAttempts = 0;
@@ -291,17 +365,17 @@
                         });
                         startStallDetector();
                     });
-                    
+
                     hls.on(Hls.Events.ERROR, (event, data) => {
                         if (data.fatal) {
-                           handleStreamError();
+                            handleStreamError();
                         }
                     });
                 } else {
                     showStatus('HLS is not supported on this browser.', true);
                 }
             }
-            
+
             function startStallDetector() {
                 stallDetector = setTimeout(() => {
                     if (player.currentTime > 0.1 && player.videoWidth === 0) {
@@ -309,23 +383,23 @@
                         clearTimeout(stallDetector);
                         showStatus('Error: Video format (likely HEVC/H.265) or Audio (AC3) is not supported by your browser.', true);
                     }
-                }, 4000); 
+                }, 4000);
             }
 
             function handleStreamError() {
                 clearTimeout(stallDetector);
                 if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
                     reconnectAttempts++;
-                    showStatus(`Stream lost. Reconnecting... (Attempt ${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`, true);
+                    showStatus('Stream lost. Reconnecting... (Attempt ' + reconnectAttempts + '/' + MAX_RECONNECT_ATTEMPTS + ')', true);
                     setTimeout(initHls, RECONNECT_DELAY);
                 } else {
                     showStatus('Could not reconnect to the stream.', true);
                 }
             }
-            
+
             setChannelInfo();
             try {
-                decodedStreamUrl = atob(decodeURIComponent(streamParam));
+                decodedStreamUrl = atob(safeDecode(streamParam));
                 initHls();
             } catch (e) {
                 showStatus('Error: Invalid stream URL format.', true);
@@ -349,7 +423,6 @@
         document.addEventListener('dragstart', e => e.preventDefault());
 
         // ─── 4. Block keyboard shortcuts that open DevTools or view‑source ───
-        //    (We do NOT block Ctrl+C / Ctrl+V / Ctrl+S — they are essential for users)
         document.addEventListener('keydown', e => {
             const key = e.key.toLowerCase();
             const ctrl = e.ctrlKey || e.metaKey;
@@ -363,33 +436,28 @@
             }
         });
 
-        // ─── 5. Block view‑source: protocol (if someone types view-source: in URL) ───
+        // ─── 5. Block view‑source: protocol ───
         if (window.location.protocol === 'view-source:') {
             window.location.href = 'about:blank';
         }
 
-        // ─── 6. (Optional) Silence console logging — prevents casual inspection ───
-        //     This does not break your site, but makes `console.log` useless.
+        // ─── 6. Silence console logging ───
         const noop = () => {};
         ['log', 'warn', 'error', 'info', 'debug', 'trace', 'dir', 'dirxml', 'table', 'assert', 'count', 'group', 'groupEnd', 'time', 'timeEnd', 'profile', 'profileEnd'].forEach(m => {
             if (console[m]) console[m] = noop;
         });
 
-        // ─── 7. (Safe) DevTools detection using window size difference ───
-        //     This is less intrusive and rarely triggers false positives.
+        // ─── 7. DevTools detection using window size difference ───
         (function detectDevTools() {
             let warned = false;
 
             function checkSize() {
-                // DevTools usually take up at least 200px of width or height.
                 const threshold = 200;
                 const widthDiff = window.outerWidth - window.innerWidth;
                 const heightDiff = window.outerHeight - window.innerHeight;
 
                 if ((widthDiff > threshold || heightDiff > threshold) && !warned) {
                     warned = true;
-                    // Instead of wiping the page, we show a subtle overlay
-                    // that disappears when they close DevTools.
                     const overlay = document.createElement('div');
                     overlay.id = 'devtools-overlay';
                     overlay.style.cssText = `
@@ -412,7 +480,6 @@
                     `;
                     document.body.appendChild(overlay);
 
-                    // Re-check every second; remove overlay if tools are closed.
                     const interval = setInterval(() => {
                         const newWidthDiff = window.outerWidth - window.innerWidth;
                         const newHeightDiff = window.outerHeight - window.innerHeight;
@@ -426,10 +493,8 @@
                 }
             }
 
-            // Check on resize and periodically
             window.addEventListener('resize', checkSize);
             setInterval(checkSize, 2000);
-            // Initial check after a short delay
             setTimeout(checkSize, 500);
         })();
 
