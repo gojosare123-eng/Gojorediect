@@ -1,424 +1,371 @@
-// ============================================================
-//  JioTV+ — Cloudflare Worker: UI + Stream Proxy
-//  Deploy: npx wrangler deploy worker.js --name jiotvplus-ui
-// ============================================================
-
-// --- Configuration ---
-const JSON_API = 'https://jiotvplus.dr-strange.workers.dev/watch/fetch.json';
-const M3U_API = 'https://jiotvplus.dr-strange.workers.dev/api/jiotvplus.m3u';
-const JIO_CDN = 'https://jiotvpllive.cdn.jio.com';
-
-// ============================================================
-//  STREAM PROXY — Handle CORS + Auth for MPD & segments
-// ============================================================
-async function handleStreamProxy(request, url) {
-  // Extract the target Jio CDN path
-  // Request comes as: /proxy/bpk-tv/StarSportsHD2Hin_BTS/WDVLive/index.mpd?__hdnea__=...
-  const targetPath = url.pathname.replace('/proxy', '');
-  const targetUrl = JIO_CDN + targetPath + (url.search || '');
-  
-  // Build proxy request — forward auth token as cookie
-  const proxyHeaders = new Headers();
-  
-  // Extract __hdnea__ from query and set as Cookie
-  const hdnea = url.searchParams.get('__hdnea__');
-  if (hdnea) {
-    proxyHeaders.set('Cookie', `__hdnea__=${hdnea}`);
-  }
-  
-  // Forward User-Agent (Jio CDN may check this)
-  proxyHeaders.set('User-Agent', 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:150.0) Gecko/20100101 Firefox/150.0');
-  proxyHeaders.set('Referer', 'https://www.jio.com/');
-  proxyHeaders.set('Origin', 'https://www.jio.com');
-  
-  // Fetch from Jio CDN
-  const response = await fetch(targetUrl, {
-    headers: proxyHeaders,
-    method: request.method
-  });
-  
-  // Clone response and add CORS headers
-  const corsHeaders = new Headers(response.headers);
-  corsHeaders.set('Access-Control-Allow-Origin', '*');
-  corsHeaders.set('Access-Control-Allow-Methods', 'GET, OPTIONS');
-  corsHeaders.set('Access-Control-Allow-Headers', '*');
-  corsHeaders.set('Access-Control-Allow-Credentials', 'true');
-  
-  // For MPD manifests, rewrite segment URLs to go through proxy
-  let body = await response.text();
-  
-  if (targetPath.endsWith('.mpd')) {
-    // Rewrite all segment URLs in the MPD to go through our proxy
-    // MPDs contain <BaseURL>, <SegmentURL>, <Initialization> etc.
-    body = body.replace(
-      /https:\/\/jiotvpllive\.cdn\.jio\.com\//g,
-      `${url.origin}/proxy/`
-    );
-    // Also rewrite relative URLs
-    const baseDir = targetPath.substring(0, targetPath.lastIndexOf('/') + 1);
-    body = body.replace(
-      /<BaseURL>([^<]+)<\/BaseURL>/g,
-      (match, baseUrl) => {
-        if (baseUrl.startsWith('http')) return match;
-        return `<BaseURL>${url.origin}/proxy${baseDir}${baseUrl}</BaseURL>`;
-      }
-    );
-  }
-  
-  return new Response(body, {
-    status: response.status,
-    headers: corsHeaders
-  });
-}
-
-// ============================================================
-//  DASHBOARD - index.html
-// ============================================================
-const INDEX_HTML = `<!DOCTYPE html>
-<html lang="en" data-theme="dark">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<meta name="theme-color" content="#0a0c10">
-<title>JioTV+ LIVE</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,system-ui,sans-serif}
-:root{--primary:#e53e3e;--dark-bg:#0a0c10;--dark-surface:#14171c;--dark-card:#1a1e24;--dark-border:#2d3138;--dark-text:#edf2f7}
-body{background:var(--dark-bg);color:var(--dark-text);min-height:100vh;line-height:1.5}
-.glass-header{background:rgba(10,12,16,.92);backdrop-filter:blur(12px);border-bottom:1px solid var(--dark-border);position:sticky;top:0;z-index:100;padding:.75rem 1.5rem}
-.header-container{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
-.logo-area{display:flex;align-items:center;gap:.75rem}
-.logo-icon{background:var(--primary);width:38px;height:38px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem}
-.logo-text{font-size:1.5rem;font-weight:800;letter-spacing:-.5px}
-.logo-text span{color:var(--primary)}
-.badge{background:var(--primary);font-size:.7rem;padding:.2rem .6rem;border-radius:40px;font-weight:600}
-.refresh-btn{background:var(--dark-surface);border:1px solid var(--dark-border);color:#fff;padding:8px 16px;border-radius:20px;cursor:pointer;font-size:.85rem;display:flex;align-items:center;gap:6px;transition:.2s}
-.refresh-btn:hover{background:var(--primary);border-color:var(--primary)}
-.search-container{max-width:1400px;margin:1rem auto;padding:0 1.5rem}
-.search-wrapper{position:relative;max-width:500px}
-.search-input{width:100%;padding:12px 20px 12px 45px;background:var(--dark-surface);border:2px solid var(--dark-border);border-radius:30px;color:var(--dark-text);font-size:.9rem;outline:none;transition:.3s}
-.search-input:focus{border-color:var(--primary)}
-.search-icon{position:absolute;left:16px;top:50%;transform:translateY(-50%);color:#666}
-.filter-bar{max-width:1400px;margin:.75rem auto 0;padding:0 1.5rem;display:flex;flex-wrap:wrap;gap:.5rem}
-.filter-chip{background:var(--dark-surface);border:1px solid var(--dark-border);color:#a0aec0;padding:6px 16px;border-radius:40px;font-size:.75rem;font-weight:600;cursor:pointer;transition:.2s;white-space:nowrap}
-.filter-chip:hover{border-color:var(--primary);color:#fff}
-.filter-chip.active{background:var(--primary);border-color:var(--primary);color:#fff}
-.stats-bar{max-width:1400px;margin:1rem auto;padding:0 1.5rem;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem}
-.channel-count{background:var(--primary);padding:.4rem 1.1rem;border-radius:60px;font-weight:700;font-size:.85rem;display:flex;align-items:center;gap:8px}
-.pulse-dot{width:10px;height:10px;background:#fff;border-radius:50%;animation:pulse 1.2s infinite alternate}
-@keyframes pulse{0%{opacity:.4;transform:scale(.8)}100%{opacity:1;transform:scale(1.2)}}
-.update-time{background:var(--dark-surface);padding:.4rem 1rem;border-radius:60px;font-size:.8rem}
-.main-content{max-width:1400px;margin:2rem auto;padding:0 1.5rem}
-.channels-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:1rem}
-.channel-card{background:var(--dark-card);border-radius:16px;overflow:hidden;border:1px solid var(--dark-border);transition:all .3s;cursor:pointer;display:flex;flex-direction:column}
-.channel-card:hover{transform:translateY(-4px);border-color:var(--primary);box-shadow:0 12px 28px -8px rgba(229,62,62,.2)}
-.card-media{position:relative;height:160px;background:linear-gradient(135deg,#1a1e24,#0f1117);display:flex;align-items:center;justify-content:center;overflow:hidden}
-.channel-logo{width:90px;height:90px;object-fit:contain;border-radius:16px;background:rgba(0,0,0,.3);padding:8px;transition:transform .3s;z-index:2}
-.channel-card:hover .channel-logo{transform:scale(1.1)}
-.channel-logo-placeholder{font-size:3.5rem;opacity:.2;z-index:2}
-.card-media::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at center,rgba(229,62,62,.1) 0%,transparent 70%);z-index:1}
-.live-tag{position:absolute;top:10px;left:10px;background:#ef4444;padding:4px 12px;border-radius:40px;font-size:.65rem;font-weight:800;display:flex;align-items:center;gap:5px;z-index:3;box-shadow:0 2px 8px rgba(0,0,0,.5)}
-.quality-tag{position:absolute;bottom:10px;right:10px;background:rgba(0,0,0,.7);backdrop-filter:blur(4px);padding:3px 10px;border-radius:20px;font-size:.65rem;font-weight:600;z-index:3}
-.hd-tag{position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#f59e0b,#d97706);padding:3px 8px;border-radius:4px;font-size:.6rem;font-weight:800;z-index:3;letter-spacing:.5px}
-.card-info{padding:1rem;flex:1;display:flex;flex-direction:column}
-.channel-name{font-size:.95rem;font-weight:700;margin-bottom:4px;line-height:1.3}
-.channel-group{font-size:.7rem;color:#a0aec0;margin-bottom:3px;display:flex;align-items:center;gap:4px}
-.channel-meta{font-size:.68rem;color:#555;margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-.watch-btn{width:100%;background:linear-gradient(105deg,var(--primary) 0%,#c53030 100%);border:none;padding:10px;border-radius:25px;color:#fff;font-weight:700;font-size:.82rem;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;transition:.2s;margin-top:auto}
-.watch-btn:hover{filter:brightness(1.1);transform:scale(.98)}
-.loading-state{display:flex;flex-direction:column;align-items:center;padding:5rem;gap:1rem;grid-column:1/-1}
-.spinner{width:48px;height:48px;border:4px solid rgba(229,62,62,.2);border-top:4px solid var(--primary);border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.empty-state{text-align:center;padding:3rem;opacity:.5;grid-column:1/-1}
-.empty-state i{font-size:3rem;display:block;margin-bottom:1rem}
-footer{background:var(--dark-surface);padding:1.5rem;text-align:center;border-top:1px solid var(--dark-border);margin-top:3rem;font-size:.75rem;opacity:.6}
-@media(max-width:768px){.channels-grid{grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.8rem}.card-media{height:140px}.channel-logo{width:75px;height:75px}.channel-name{font-size:.85rem}.logo-text{font-size:1.2rem}}
-@media(max-width:480px){.channels-grid{grid-template-columns:1fr}.filter-bar{overflow-x:auto;flex-wrap:nowrap;padding-bottom:4px}}
-</style>
-</head>
-<body>
-<header class="glass-header">
-  <div class="header-container">
-    <div class="logo-area"><div class="logo-icon"><i class="fas fa-bolt"></i></div><div class="logo-text">Jio<span>TV+</span></div><span class="badge">LIVE</span></div>
-    <button class="refresh-btn" onclick="fetchAllData(true)"><i class="fas fa-sync-alt"></i> Refresh</button>
-  </div>
-</header>
-<div class="search-container"><div class="search-wrapper"><i class="fas fa-search search-icon"></i><input type="text" class="search-input" id="searchInput" placeholder="Search channels..." oninput="filterChannels()"></div></div>
-<div class="filter-bar" id="filterBar"></div>
-<div class="stats-bar"><div class="channel-count"><span class="pulse-dot"></span><span id="channelCount">0</span> Channels</div><div class="update-time"><i class="far fa-clock"></i> <span id="updateTime">Loading...</span></div></div>
-<main class="main-content"><div class="channels-grid" id="channelsGrid"><div class="loading-state"><div class="spinner"></div><p>Loading channels...</p></div></div></main>
-<footer><div>JioTV+ Streamer | Auto-refresh: 30 min</div></footer>
-<script>
-const JSON_API='${JSON_API}';const M3U_API='${M3U_API}';const CACHE_KEY='jiotv_full_data';const CACHE_TIME=30*60*1000;
-let allChannels=[],allGroups=[],activeFilter='all';
-async function fetchAllData(forceRefresh){
-  const grid=document.getElementById('channelsGrid');
-  grid.innerHTML='<div class="loading-state"><div class="spinner"></div><p>Fetching channels...</p></div>';
-  if(!forceRefresh){try{const r=localStorage.getItem(CACHE_KEY);if(r){const d=JSON.parse(r);if(Date.now()-d.timestamp<CACHE_TIME){allChannels=d.channels;allGroups=d.groups||[];renderChannels(allChannels);updateStats();renderFilterChips();return}}}catch(e){}}
-  try{
-    const[jr,mr]=await Promise.all([fetch(JSON_API),fetch(M3U_API)]);
-    let channels=[];let meta={};
-    if(jr.ok){const j=await jr.json();if(j.success&&j.data){channels=j.data.livechannels||[];meta=j.data}}
-    const md={};
-    if(mr.ok){const mt=await mr.text();const lines=mt.split('\\n');for(let i=0;i<lines.length;i++){const l=lines[i].trim();if(l.startsWith('#EXTINF:')){
-      const logo=(l.match(/tvg-logo="([^"]*)"/)||[])[1]||'';
-      const grp=(l.match(/group-title="([^"]*)"/)||[])[1]||'';
-      const lang=(l.match(/tvg-language="([^"]*)"/)||[])[1]||'';
-      const nm=(l.match(/,(.+)$/)||[])[1]?.trim()||'';
-      // Look ahead for license key
-      let licKey='';let m3uUrl='';
-      for(let j=i+1;j<Math.min(i+3,lines.length);j++){const nl=lines[j].trim();if(nl.startsWith('#KODIPROP:')&&nl.includes('license_key'))licKey=nl.split('=').pop();if(nl.startsWith('http'))m3uUrl=nl.split('|')[0]}
-      if(nm){md[nm]={logo,group:grp,language:lang,licenseKey:licKey,m3uUrl:m3uUrl}}}}
-    }
-    const gs=new Set();
-    channels=channels.map(c=>{
-      const i=md[c.name]||md[Object.keys(md).find(k=>k.toLowerCase()===c.name?.toLowerCase())]||{};
-      if(i.group)gs.add(i.group);
-      // Use M3U URL (which has auth token baked in) if available, otherwise use JSON mpd + cookie
-      const streamUrl=i.m3uUrl||c.mpd||'';
-      return{...c,logo:i.logo||'',group:i.group||'',language:i.language||'',licenseKey:i.licenseKey||'',streamUrl:streamUrl}
-    });
-    allChannels=channels;allGroups=['all',...Array.from(gs).sort()];
-    try{localStorage.setItem(CACHE_KEY,JSON.stringify({channels:allChannels,groups:allGroups,timestamp:Date.now()}))}catch(e){}
-    renderChannels(allChannels);updateStats();renderFilterChips();
-  }catch(e){console.error(e);grid.innerHTML='<div class="empty-state"><i class="fas fa-times-circle"></i><p>Failed to load.</p><button class="watch-btn" style="width:auto;margin-top:1rem;padding:10px 20px" onclick="fetchAllData(true)">Retry</button></div>'}
-}
-function renderChannels(cc){
-  const grid=document.getElementById('channelsGrid');
-  if(!cc||!cc.length){grid.innerHTML='<div class="empty-state"><i class="fas fa-tv"></i><p>No channels found</p></div>';return}
-  grid.innerHTML=cc.map(ch=>{
-    const n=escHtml(ch.name||'Unknown'),l=ch.logo||'',g=ch.group||'',la=ch.language||'',id=ch.contentId||'',hd=/hd/i.test(n);
-    const su=ch.streamUrl||ch.mpd||'';
-    return '<div class="channel-card" onclick="openPlayer(\''+escAttr(n)+'\',\''+escAttr(su)+'\',\''+escAttr(id)+'\',\''+escAttr(ch.cookie||'')+'\',\''+escAttr(ch.licenseKey||'')+'\')">'
-      +'<div class="card-media">'
-      +(l?'<img class="channel-logo" src="'+escAttr(l)+'" alt="'+n+'" loading="lazy" onerror="this.style.display=\\'none\\';this.nextElementSibling.style.display=\\'block\\'"><i class="fas fa-tv channel-logo-placeholder" style="display:none"></i>':'<i class="fas fa-tv channel-logo-placeholder"></i>')
-      +'<div class="live-tag"><i class="fas fa-circle" style="font-size:.35rem"></i> LIVE</div>'
-      +(hd?'<div class="hd-tag">HD</div>':'')+(g?'<div class="quality-tag">'+escHtml(g)+'</div>':'')
-      +'</div><div class="card-info"><div class="channel-name">'+n+'</div>'
-      +(g?'<div class="channel-group"><i class="fas fa-folder" style="font-size:.6rem"></i> '+escHtml(g)+'</div>':'')
-      +'<div class="channel-meta"><span><i class="fas fa-hashtag" style="font-size:.6rem"></i> '+id+'</span>'+(la?'<span><i class="fas fa-language" style="font-size:.6rem"></i> '+escHtml(la)+'</span>':'')
-      +'</div><button class="watch-btn" onclick="event.stopPropagation();openPlayer(\''+escAttr(n)+'\',\''+escAttr(su)+'\',\''+escAttr(id)+'\',\''+escAttr(ch.cookie||'')+'\',\''+escAttr(ch.licenseKey||'')+'\')">'
-      +'<i class="fas fa-play-circle"></i> WATCH NOW</button></div></div>'
-  }).join('');
-}
-function filterChannels(){
-  const t=document.getElementById('searchInput').value.toLowerCase().trim();
-  let f=allChannels;
-  if(activeFilter!=='all')f=f.filter(c=>(c.group||'').toLowerCase()===activeFilter.toLowerCase());
-  if(t)f=f.filter(c=>(c.name||'').toLowerCase().includes(t)||(c.group||'').toLowerCase().includes(t)||(c.language||'').toLowerCase().includes(t)||(c.contentId||'').includes(t));
-  renderChannels(f);document.getElementById('channelCount').textContent=f.length
-}
-function setFilter(g){activeFilter=g;document.querySelectorAll('.filter-chip').forEach(e=>e.classList.toggle('active',e.dataset.group===g));filterChannels()}
-function renderFilterChips(){const b=document.getElementById('filterBar');if(!allGroups.length){b.innerHTML='';return};b.innerHTML=allGroups.map(g=>'<span class="filter-chip'+(g==='all'?' active':'')+'" data-group="'+g+'" onclick="setFilter(\''+g+'\')">'+(g==='all'?'<i class="fas fa-th-large"></i> All':g)+'</span>').join('')}
-function updateStats(){document.getElementById('channelCount').textContent=allChannels.length;document.getElementById('updateTime').textContent='Updated: '+new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
-function openPlayer(n,u,i,c,lk){
-  if(!u){alert('No stream URL');return}
-  try{localStorage.setItem('jiotv_current_channel',JSON.stringify({name:n,streamUrl:u,contentId:i,cookie:c,licenseKey:lk}))}catch(e){}
-  const p=new URLSearchParams({name:n,url:u,id:i,cookie:c,licenseKey:lk});
-  window.location.href='/player?'+p.toString()
-}
-function escHtml(s){if(!s)return'';const d=document.createElement('div');d.textContent=s;return d.innerHTML}
-function escAttr(s){if(!s)return'';return s.replace(/&/g,'&amp;').replace(/'/g,"\\\\x27").replace(/"/g,'&quot;')}
-fetchAllData();setInterval(()=>fetchAllData(true),CACHE_TIME);
-document.addEventListener('keydown',e=>{if(e.ctrlKey&&e.key==='k'){e.preventDefault();document.getElementById('searchInput').focus()}});
-</script>
-</body>
-</html>`;
-
-// ============================================================
-//  PLAYER - player.html (served at /player)
-// ============================================================
-const PLAYER_HTML = `<!doctype html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,viewport-fit=cover">
-<title>JioTV+ Player</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%A1%3C/text%3E%3C/svg%3E">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/shaka-player.ui.min.js"></script>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shaka-player/4.7.11/controls.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-<style>
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:#000;overflow:hidden;height:100vh;width:100vw;font-family:Inter,system-ui,-apple-system,sans-serif;user-select:none}
-#video-container{width:100vw;height:100vh;position:relative;background:#000}
-video{width:100%;height:100%;object-fit:contain}
-.shaka-controls-container{bottom:env(safe-area-inset-bottom,0px)}
-#channelInfo{position:fixed;top:20px;left:20px;z-index:1000;display:flex;align-items:center;gap:12px;background:rgba(0,0,0,.72);backdrop-filter:blur(12px);padding:10px 18px 10px 14px;border-radius:30px;border:1px solid rgba(255,255,255,.08);opacity:1;transition:opacity .4s;pointer-events:none}
-#channelInfo.hidden{opacity:0}
-.ci-dot{width:10px;height:10px;background:#ef4444;border-radius:50%;animation:pulse-dot 1.2s infinite alternate}
-@keyframes pulse-dot{0%{opacity:.4;transform:scale(.8)}100%{opacity:1;transform:scale(1.2)}}
-#channelInfo .ci-name{font-size:.9rem;font-weight:600;color:#fff}
-#channelInfo .ci-status{font-size:.7rem;color:#94a3b8}
-#backBtn{position:fixed;top:20px;right:20px;z-index:1000;background:rgba(0,0,0,.72);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.1);color:#fff;width:42px;height:42px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:1.1rem;transition:.2s}
-#backBtn:hover{background:rgba(229,62,62,.85);border-color:#e53e3e;transform:scale(1.05)}
-#errorOverlay{position:fixed;inset:0;z-index:2000;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.92);backdrop-filter:blur(8px)}
-#errorOverlay.show{display:flex}
-.error-box{text-align:center;padding:2rem;max-width:400px}
-.error-box i{font-size:3rem;color:#ef4444;margin-bottom:1rem}
-.error-box h2{color:#fff;font-size:1.3rem;margin-bottom:.5rem}
-.error-box p{color:#94a3b8;font-size:.85rem;margin-bottom:1.5rem;line-height:1.5}
-.error-box button{background:#e53e3e;border:none;color:#fff;padding:12px 28px;border-radius:30px;font-size:.9rem;font-weight:600;cursor:pointer;transition:.2s}
-.error-box button:hover{background:#c53030;transform:scale(.97)}
-#loadingSpinner{position:fixed;inset:0;z-index:1500;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#000;transition:opacity .6s}
-#loadingSpinner.hidden{opacity:0;pointer-events:none}
-.spinner-ring{width:56px;height:56px;border:4px solid rgba(229,62,62,.15);border-top:4px solid #e53e3e;border-radius:50%;animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-#loadingSpinner p{color:#94a3b8;margin-top:1rem;font-size:.85rem}
-@media(max-width:480px){#channelInfo{top:12px;left:12px;padding:8px 14px 8px 10px}#channelInfo .ci-name{font-size:.8rem}#backBtn{top:12px;right:12px;width:38px;height:38px;font-size:1rem}}
-</style>
-</head>
-<body>
-<div id="loadingSpinner"><div class="spinner-ring"></div><p>Starting stream...</p></div>
-<div id="errorOverlay"><div class="error-box"><i class="fas fa-exclamation-triangle"></i><h2 id="errorTitle">Playback Error</h2><p id="errorMessage">Unable to play this channel.</p><button onclick="goBack()"><i class="fas fa-arrow-left"></i> Back</button></div></div>
-<div id="channelInfo" class="hidden"><span class="ci-dot"></span><div><div class="ci-name" id="channelNameDisplay">Channel</div><div class="ci-status">LIVE</div></div></div>
-<button id="backBtn" onclick="goBack()"><i class="fas fa-times"></i></button>
-<div id="video-container" data-shaka-player-container><video data-shaka-player id="video" autoplay playsinline crossorigin="anonymous"></video></div>
-<script>
-const up=new URLSearchParams(window.location.search);
-let cn=up.get('name')||'',mu=up.get('url')||'',ci=up.get('id')||'',ck=up.get('cookie')||'',lk=up.get('licenseKey')||'';
-try{const s=JSON.parse(localStorage.getItem('jiotv_current_channel'));if(s){cn=cn||s.name||'';mu=mu||s.streamUrl||s.mpdUrl||'';ci=ci||s.contentId||'';ck=ck||s.cookie||'';lk=lk||s.licenseKey||''}}catch(e){}
-
-const ve=document.getElementById('video'),ce=document.getElementById('video-container'),se=document.getElementById('loadingSpinner'),eo=document.getElementById('errorOverlay'),et=document.getElementById('errorTitle'),em=document.getElementById('errorMessage'),cif=document.getElementById('channelInfo'),cnd=document.getElementById('channelNameDisplay');
-cnd.textContent=cn||'Channel';let player=null,ui=null;
-
-// If the URL is from Jio CDN, rewrite it to go through our proxy
-const PROXY_ORIGIN = window.location.origin;
-function rewriteUrl(url) {
-  if (!url) return url;
-  // If it's a Jio CDN URL, rewrite through proxy
-  if (url.includes('jiotvpllive.cdn.jio.com')) {
-    // Extract path + query from the full Jio URL
-    try {
-      const u = new URL(url);
-      return PROXY_ORIGIN + '/proxy' + u.pathname + u.search;
-    } catch(e) {
-      // Manual replace
-      return url.replace(/https:\\/\\/jiotvpllive\\.cdn\\.jio\\.com/g, PROXY_ORIGIN + '/proxy');
-    }
-  }
-  return url;
-}
-
-mu = rewriteUrl(mu);
-
-function init(){
-  if(!mu){showerr('No Stream URL','Select a channel first.');return}
-  
-  shaka.polyfill.installAll();
-  if(!shaka.Player.isBrowserSupported()){showerr('Browser Not Supported','Use Chrome, Edge, or Firefox.');return}
-  
-  player=new shaka.Player();
-  player.attach(ve).then(()=>{
-    const cfg={streaming:{bufferingGoal:30,rebufferingGoal:5,bufferBehind:10,jumpLargeGaps:true,smallGapLimit:.5,gapDetectionThreshold:.5,retryParameters:{maxAttempts:5,baseDelay:1000,backoffFactor:2,fuzzFactor:.5,timeout:15000,stallTimeout:5000,connectionTimeout:10000},updateIntervalSeconds:2,inaccurateManifestTolerance:2},manifest:{dash:{ignoreDrmInfo:false,autoCorrectDrift:true}}};
-    
-    // If we have a ClearKey license key from M3U, use it!
-    if(lk && lk.includes(':')){
-      const parts=lk.split(':');
-      const keyId=parts[0];const key=parts[1];
-      console.log('[Player] Using ClearKey:', keyId, key);
-      cfg.drm={clearKeys:{}};
-      cfg.drm.clearKeys[keyId]=key;
-    }else{
-      // Fallback to Widevine license server
-      cfg.drm={servers:{'com.widevine.alpha':'https://license.jio.com/drm/wv/ger','com.microsoft.playready':'https://license.jio.com/drm/pr/ger'},advanced:{'com.widevine.alpha':{videoRobustness:'SW_SECURE_CRYPTO',audioRobustness:'SW_SECURE_CRYPTO'}}};
-    }
-    
-    player.configure(cfg);
-    
-    // Request filter for auth (only needed for Widevine path)
-    if(!lk){
-      player.getNetworkingEngine().registerRequestFilter((t,r)=>{
-        if(ck)r.headers['Cookie']=ck;
-        r.headers['Referer']='https://www.jio.com/';r.headers['Origin']='https://www.jio.com';
-        r.allowCrossSiteCredentials=true;
-      });
-    }
-    
-    buildUI();loadStream()
-  }).catch(e=>{console.error(e);showerr('Player Error','Failed to initialize: '+e.message)});
-  
-  player.addEventListener('error',e=>handleErr(e.detail))
-}
-
-function buildUI(){
-  ui=new shaka.ui.Overlay(player,ce,ve);
-  ui.configure({controlPanelElements:['play_pause','time_and_duration','overflow_menu','rewind','fast_forward','volume','fullscreen','cast'],overflowMenuButtons:['captions','quality','playback_rate','language'],addSeekBar:true,addBigPlayButton:true,fadeDelay:3000,doubleClickForFullscreen:true});
-  player.addEventListener('playing',()=>{se.classList.add('hidden');cif.classList.remove('hidden');setTimeout(()=>cif.classList.add('hidden'),4000)});
-  let it;function si(){cif.classList.remove('hidden');clearTimeout(it);if(!ve.paused)it=setTimeout(()=>cif.classList.add('hidden'),3000)}
-  document.addEventListener('mousemove',si);document.addEventListener('touchstart',si);player.addEventListener('pause',()=>cif.classList.remove('hidden'));player.addEventListener('seeked',si)
-}
-
-function loadStream(){
-  console.log('[Player] Loading:',mu);
-  player.load(mu).then(()=>{
-    console.log('[Player] Stream loaded successfully');
-    // For ClearKey, also hide spinner here in case 'playing' doesn't fire
-    setTimeout(()=>se.classList.add('hidden'),2000);
-  }).catch(e=>{console.error(e);handleErr(e)})
-}
-
-function handleErr(e){
-  se.classList.add('hidden');
-  if(e.code===shaka.util.Error.Code.LOAD_INTERRUPTED)return;
-  let t='Playback Error',m='An unexpected error occurred.';
-  switch(e.code){
-    case shaka.util.Error.Code.HTTP_ERROR:t='Network Error';m='Failed to fetch stream. The proxy may need refreshing.';break;
-    case shaka.util.Error.Code.TIMEOUT:t='Timeout';m='Server took too long.';break;
-    case shaka.util.Error.Code.MANIFEST_NOT_FOUND:case shaka.util.Error.Code.MANIFEST_PARSE_ERROR:t='Stream Error';m='Stream manifest could not be loaded.';break;
-    case shaka.util.Error.Code.LICENSE_ERROR:case shaka.util.Error.Code.LICENSE_RESPONSE_REJECTED:case shaka.util.Error.Code.LICENSE_REQUEST_FAILED:t='DRM Error';m='Could not decrypt. Session may have expired. Refresh channels.';break;
-    case shaka.util.Error.Code.WIDEVIAGE_CDM_ERROR:t='DRM Error';m='Widevine module error. Use Chrome/Edge.';break;
-    case shaka.util.Error.Code.QUOTA_EXCEEDED_ERROR:t='Stream Limit';m='Too many streams or session expired.';break;
-    case shaka.util.Error.Code.NO_VIDEO_ENCODING:t='Codec Error';m='Video codec not supported.';break;
-    default:if(e.message)m=e.message;
-  }
-  showerr(t,m+' (Code: '+e.code+')')
-}
-
-function showerr(t,m){se.classList.add('hidden');cif.classList.add('hidden');et.textContent=t;em.textContent=m;eo.classList.add('show')}
-window.goBack=function(){if(player){try{player.destroy()}catch(_){}}if(document.referrer&&document.referrer.includes(location.host))history.back();else location.href='/'};
-document.addEventListener('keydown',e=>{if(e.key==='Escape'||(e.key==='Backspace'&&!e.target.matches('input,textarea'))){e.preventDefault();goBack()}if(e.key==='f'||e.key==='F'){document.fullscreenElement?document.exitFullscreen():ce.requestFullscreen()}if(e.key==='m'||e.key==='M')ve.muted=!ve.muted});
-document.addEventListener('DOMContentLoaded',init)
-</script>
-</body>
-</html>`;
-
-// ============================================================
-//  WORKER ROUTER
-// ============================================================
-export default {
-  async fetch(request, env, ctx) {
-    const url = new URL(request.url);
-    const path = url.pathname;
-
-    // Handle CORS preflight
-    if (request.method === 'OPTIONS') {
-      return new Response(null, {
-        headers: {
-          'Access-Control-Allow-Origin': '*',
-          'Access-Control-Allow-Methods': 'GET, OPTIONS',
-          'Access-Control-Allow-Headers': '*',
-          'Access-Control-Max-Age': '86400'
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simple Player</title>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+  <style>
+        /* Minimal base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-      });
-    }
+        body {
+            background: #1a1a1a;
+            color: #eee;
+            font-family: sans-serif;
+            padding: 15px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
 
-    // Stream proxy: /proxy/* -> Jio CDN
-    if (path.startsWith('/proxy/')) {
-      return handleStreamProxy(request, url);
-    }
+        /* Header with back button */
+        .header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .back-button {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 4px;
+            font-size: 15px;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .back-button:hover {
+            background: #555;
+        }
 
-    // Player page
-    if (path === '/player' || path.startsWith('/player?')) {
-      return new Response(PLAYER_HTML, {
-        headers: { 'content-type': 'text/html;charset=UTF-8', 'cache-control': 'public, max-age=3600' }
-      });
-    }
+        /* Channel info – simple line */
+        .info {
+            font-size: 15px;
+            color: #ccc;
+        }
+        .info span {
+            font-weight: 600;
+            color: #fff;
+        }
 
-    // Dashboard (everything else)
-    return new Response(INDEX_HTML, {
-      headers: { 'content-type': 'text/html;charset=UTF-8', 'cache-control': 'public, max-age=3600' }
-    });
-  }
-};
+        /* Video player */
+        video {
+            width: 100%;
+            background: #000;
+            border-radius: 4px;
+            display: block;
+            /* keep aspect ratio by default */
+            object-fit: contain;
+        }
+
+        /* Aspect ratio controls */
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            margin-top: 4px;
+        }
+        .fit-button {
+            background: #333;
+            color: #fff;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background 0.15s, transform 0.1s;
+        }
+        .fit-button:hover {
+            background: #444;
+        }
+        .fit-button.active {
+            background: #FF5722;
+            font-weight: 600;
+        }
+
+        /* Status message */
+        .status {
+            text-align: center;
+            padding: 8px;
+            border-radius: 4px;
+            background: rgba(255, 87, 34, 0.1);
+            color: #FF5722;
+            display: none;
+        }
+        .status.error {
+            background: rgba(239, 68, 68, 0.1);
+            color: #ef4444;
+        }
+    </style>
+ </head>
+ <body>
+  <div class="container">
+   <!-- Back button -->
+   <div class="header">
+    <button class="back-button">← Back</button>
+    <div class="info">
+     Channel: <span id="channelName">Loading...</span>
+    </div>
+   </div>
+   <!-- Video element with native controls -->
+   <video id="player" controls playsinline crossorigin="anonymous"></video>
+   <!-- Aspect ratio buttons -->
+   <div class="controls">
+    <button class="fit-button active" data-fit="fit">Fit</button>
+    <button class="fit-button" data-fit="fill">Fill</button>
+    <button class="fit-button" data-fit="stretch">Stretch</button>
+   </div>
+   <!-- Status overlay -->
+   <div id="statusMessage" class="status"></div>
+  </div>
+  <script>
+        (function() {
+            const CORS_PROXY_URL = 'https://demonji.onrender.com/cors-proxy.php/';
+            const urlParams = new URLSearchParams(window.location.search);
+            const streamParam = urlParams.get('s') || '';
+            const channelNameParam = urlParams.get('name') || 'Unknown Channel';
+            const backUrlParam = urlParams.get('back') || 'MaC.html';
+
+            const player = document.getElementById('player');
+            const channelName = document.getElementById('channelName');
+            const backButton = document.querySelector('.back-button');
+            const statusMessage = document.getElementById('statusMessage');
+            const fitButtons = document.querySelectorAll('.fit-button');
+
+            let hls;
+            let decodedStreamUrl = '';
+            let reconnectAttempts = 0;
+            const MAX_RECONNECT_ATTEMPTS = 10;
+            const RECONNECT_DELAY = 3000;
+            let stallDetector = null;
+
+            // --- Back navigation ---
+            backButton.addEventListener('click', function() {
+                try {
+                    window.location.assign(decodeURIComponent(backUrlParam));
+                } catch (_) {
+                    window.location.href = 'MaC.html';
+                }
+            });
+
+            // --- Aspect ratio buttons ---
+            fitButtons.forEach(button => {
+                button.addEventListener('click', function() {
+                    const fit = this.dataset.fit;
+                    player.style.objectFit = fit === 'fill' ? 'cover' : fit === 'stretch' ? 'fill' : 'contain';
+                    fitButtons.forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            // --- Channel info ---
+            channelName.textContent = decodeURIComponent(channelNameParam);
+
+            // --- Status helpers ---
+            function showStatus(msg, isError = false) {
+                statusMessage.textContent = msg;
+                statusMessage.style.display = 'block';
+                statusMessage.className = 'status' + (isError ? ' error' : '');
+            }
+            function hideStatus() {
+                statusMessage.style.display = 'none';
+            }
+
+            // --- Stall detector (HEVC/AC3 fallback) ---
+            function startStallDetector() {
+                stallDetector = setTimeout(() => {
+                    if (player.currentTime > 0.1 && player.videoWidth === 0) {
+                        if (hls) hls.destroy();
+                        clearTimeout(stallDetector);
+                        showStatus('Error: Video format (HEVC/H.265) or audio (AC3) not supported by your browser.', true);
+                    }
+                }, 4000);
+            }
+
+            // --- HLS error handling ---
+            function handleStreamError() {
+                clearTimeout(stallDetector);
+                if (reconnectAttempts < MAX_RECONNECT_ATTEMPTS) {
+                    reconnectAttempts++;
+                    showStatus(`Stream lost. Reconnecting… (${reconnectAttempts}/${MAX_RECONNECT_ATTEMPTS})`, true);
+                    setTimeout(initHls, RECONNECT_DELAY);
+                } else {
+                    showStatus('Could not reconnect to the stream.', true);
+                }
+            }
+
+            // --- HLS initialisation ---
+            function initHls() {
+                if (!decodedStreamUrl) {
+                    showStatus('Error: No stream URL provided.', true);
+                    return;
+                }
+
+                if (hls) hls.destroy();
+                clearTimeout(stallDetector);
+                player.pause();
+                showStatus('Loading channel…');
+
+                if (Hls.isSupported()) {
+                    hls = new Hls({
+                        maxBufferLength: 300,
+                        maxMaxBufferLength: 600,
+                        maxBufferSize: 500 * 1024 * 1024,
+                        fragLoadingMaxRetry: 8,
+                        lowLatencyMode: true,
+                        enableWorker: true,
+                        xhrSetup: (xhr, url) => {
+                            xhr.open('GET', CORS_PROXY_URL + url, true);
+                            xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                            xhr.setRequestHeader('Referer', 'http://demonji.onrender.com/');
+                        }
+                    });
+
+                    hls.loadSource(CORS_PROXY_URL + decodedStreamUrl);
+                    hls.attachMedia(player);
+
+                    hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                        hideStatus();
+                        reconnectAttempts = 0;
+                        player.play().catch(() => {
+                            showStatus('Autoplay blocked – tap to play.', false);
+                        });
+                        startStallDetector();
+                    });
+
+                    hls.on(Hls.Events.ERROR, (event, data) => {
+                        if (data.fatal) {
+                            handleStreamError();
+                        }
+                    });
+                } else {
+                    showStatus('HLS is not supported on this browser.', true);
+                }
+            }
+
+            // --- Decode and start ---
+            try {
+                decodedStreamUrl = atob(decodeURIComponent(streamParam));
+                initHls();
+            } catch (e) {
+                showStatus('Error: Invalid stream URL format.', true);
+            }
+        })();
+    </script>
+  <script>
+    (function() {
+        'use strict';
+
+        // ─── 1. Disable right‑click (context menu) ───
+        document.addEventListener('contextmenu', e => e.preventDefault());
+
+        // ─── 2. Disable text selection (except on form inputs) ───
+        document.addEventListener('selectstart', e => {
+            if (e.target.closest('input, textarea, [contenteditable="true"]')) return;
+            e.preventDefault();
+        });
+
+        // ─── 3. Disable dragging of page elements ───
+        document.addEventListener('dragstart', e => e.preventDefault());
+
+        // ─── 4. Block keyboard shortcuts that open DevTools or view‑source ───
+        //    (We do NOT block Ctrl+C / Ctrl+V / Ctrl+S — they are essential for users)
+        document.addEventListener('keydown', e => {
+            const key = e.key.toLowerCase();
+            const ctrl = e.ctrlKey || e.metaKey;
+            const shift = e.shiftKey;
+
+            if (key === 'f12' ||
+                (ctrl && shift && (key === 'i' || key === 'j')) ||
+                (ctrl && key === 'u')) {
+                e.preventDefault();
+                return false;
+            }
+        });
+
+        // ─── 5. Block view‑source: protocol (if someone types view-source: in URL) ───
+        if (window.location.protocol === 'view-source:') {
+            window.location.href = 'about:blank';
+        }
+
+        // ─── 6. (Optional) Silence console logging — prevents casual inspection ───
+        //     This does not break your site, but makes `console.log` useless.
+        const noop = () => {};
+        ['log', 'warn', 'error', 'info', 'debug', 'trace', 'dir', 'dirxml', 'table', 'assert', 'count', 'group', 'groupEnd', 'time', 'timeEnd', 'profile', 'profileEnd'].forEach(m => {
+            if (console[m]) console[m] = noop;
+        });
+
+        // ─── 7. (Safe) DevTools detection using window size difference ───
+        //     This is less intrusive and rarely triggers false positives.
+        (function detectDevTools() {
+            let warned = false;
+
+            function checkSize() {
+                // DevTools usually take up at least 200px of width or height.
+                const threshold = 200;
+                const widthDiff = window.outerWidth - window.innerWidth;
+                const heightDiff = window.outerHeight - window.innerHeight;
+
+                if ((widthDiff > threshold || heightDiff > threshold) && !warned) {
+                    warned = true;
+                    // Instead of wiping the page, we show a subtle overlay
+                    // that disappears when they close DevTools.
+                    const overlay = document.createElement('div');
+                    overlay.id = 'devtools-overlay';
+                    overlay.style.cssText = `
+                        position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+                        background: rgba(0,0,0,0.85);
+                        display: flex; justify-content: center; align-items: center;
+                        z-index: 999999;
+                        color: #ff4444;
+                        font-family: sans-serif;
+                        font-size: 1.5rem;
+                        flex-direction: column;
+                        text-align: center;
+                        padding: 20px;
+                        backdrop-filter: blur(4px);
+                    `;
+                    overlay.innerHTML = `
+                        <h1 style="font-size: 2.5rem; margin: 0;">⛔ Developer Tools Detected</h1>
+                        <p style="color: #aaa; max-width: 500px;">Please close the developer tools to continue using this site.</p>
+                        <p style="color: #666; font-size: 0.9rem; margin-top: 20px;">(This overlay will disappear automatically when you close them.)</p>
+                    `;
+                    document.body.appendChild(overlay);
+
+                    // Re-check every second; remove overlay if tools are closed.
+                    const interval = setInterval(() => {
+                        const newWidthDiff = window.outerWidth - window.innerWidth;
+                        const newHeightDiff = window.outerHeight - window.innerHeight;
+                        if (newWidthDiff <= threshold && newHeightDiff <= threshold) {
+                            const el = document.getElementById('devtools-overlay');
+                            if (el) el.remove();
+                            clearInterval(interval);
+                            warned = false;
+                        }
+                    }, 1000);
+                }
+            }
+
+            // Check on resize and periodically
+            window.addEventListener('resize', checkSize);
+            setInterval(checkSize, 2000);
+            // Initial check after a short delay
+            setTimeout(checkSize, 500);
+        })();
+
+        console.log('🛡️ Protection active (user‑friendly mode)');
+    })();
+</script>
+ </body>
+</html>
